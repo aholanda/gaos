@@ -1,0 +1,107 @@
+#+BEGIN: clocktable :maxlevel 2 :scope file
+#+CAPTION: Clock summary at [2018-12-11 ter 14:15]
+| Headline                | Time      |
+|-------------------------+-----------|
+| *Total time*            | *1d 4:14* |
+|-------------------------+-----------|
+| Probabilistic Scheduler | 1d 4:14   |
+#+END:
+
+* Probabilistic Scheduler
+  CLOCK: [2018-12-13 qui 16:05]--[2018-12-13 qui 17:01] =>  0:56
+  - [READ] *Linux Kernel Development* scheduler chapter to understand
+    how the scheduler architecture is. *Is there a queue apart from
+    processor queue?*
+  - [SPEC] Now *FIFOScheduling* has the necessary steps but the queue
+    verification of existence of a task showed an architecture
+    decision problem. *What processor is with less load?*
+
+  CLOCK: [2018-12-13 qui 10:51]--[2018-12-13 qui 11:50] =>  0:59
+  - [STUDY] Few productive because my allergy and the medicines 
+    makes me feel very sleepy.
+
+  CLOCK: [2018-12-12 qua 13:42]--[2018-12-12 qua 18:23] =>  4:41
+  - [WATCH] *[[http://lamport.azurewebsites.net/video/videos.html][Videos 1, 2, 3, 4 and 5 from TLA+ Lamport page]]*.
+  - [SPEC] *Done* with generation of *Next step* in the
+    *FIFOScheduling*. *Missing* the *Timer* and the *Roubin-Robin*
+    enabling.
+
+  CLOCK: [2018-12-12 qua 09:38]--[2018-12-12 qua 11:56] =>  2:18
+  - [SPEC] Change the *FIFOScheduling* spec that was terribly 
+    wrong with only 2 steps. One step was added to be aware 
+    when the task was preempted and sending to execution.
+  - [READ] *"Specifying Systems"* *RealTime* specification and I 
+    start to understand the reasoning behind the bounded time 
+    and TLA+. Yet it's still difficult to get it. 
+
+  CLOCK: [2018-12-11 ter 14:15]--[2018-12-11 ter 17:03] =>  2:48
+  - [WATCH] *TLA Videos by Lamport* to understand 
+    *Safety, Liveness, Weak Fairness and Strong Fairness*.
+  - [STUDY] *Timer* to *continue* the *FIFOScheduling* spec, 
+    TLA+ is hard to understand in this area. I am watching 
+    Lamport videos about TLA+.
+
+  CLOCK: [2018-12-11 ter 09:07]--[2018-12-11 ter 12:08] =>  3:01
+  - [SPEC] *Change to specifying the FIFOScheduling* because it's 
+    simpler then *Fair* and I can learn how to specify the *Timer*
+    without much complexity at one time.
+
+  CLOCK: [2018-12-10 seg 15:23]--[2018-12-10 seg 18:08] =>  2:45
+  - [SPEC] *Starting the spec of FairScheduling* algorithm, things are
+    very complex in this realm. Virtual runtime is very
+    counter-intuitive. Weight mapping was not yet fully understood.
+
+  CLOCK: [2018-12-10 seg 09:00]--[2018-12-10 seg 11:54] =>  2:54
+  - [ANALYSIS] Start the model of program to simulating 
+    the scheduling, the work to spec simple things is tremendous. 
+    Maybe after implementation shows fruits, I'll be back to 
+    spec.
+  - [BUG] I dont know if the contant changes in the position
+    of elements in the tree changes the probability space.
+  - [SPEC] Change the names of variables in especification 
+    Proc -> Task, ctl -> cpuState, pst -> tskState.
+
+  CLOCK: [2018-12-07 sex 13:48]--[2018-12-07 sex 15:58] =>  2:10
+  - [SPEC] Another groundbreaking is the Timer specification that
+    could be a simple one, like a counter, or a TLA+ embbeded
+    construct. I really don't know yet, but I try to do the focus 
+    the *probabilistic nature of scheduling*.
+  - [SPEC] I try to run TLC on spec and discover the role of each 
+    module. ProcessScheduler only manage communication with processor, 
+    we have to spec a module to scheduling.
+
+  CLOCK: [2018-12-07 sex 09:43]--[2018-12-07 sex 12:05] =>  2:22
+  - [BUG] Problems to add MCProcessScheduler.cfg to toolbox.
+  - [SPEC] Add MCProcessScheduler.tla to verify the ProcessScheduler
+   spec.
+
+  CLOCK: [2018-12-06 qui 13:25]--[2018-12-06 qui 17:33] =>  4:08
+  - [SPEC] STARTING the Scheduler specification to understanding 
+    the fundamentals of process and scheduling algorithms interactions, 
+    mainly, CFS and Probablistic.
+  - [SPEC] Planning the behavior and data structure of the programs, 
+    for awhile I'm thinking in implementing using golang.
+  - [READ] [[https://www.mendeley.com/viewer/?fileId=7e691fc9-7f25-fb7d-46dc-1667d4e5b62b&documentId=290cea78-5c2c-3a2d-8ae9-cb9f426a609f][Fairness and Interactive Performan ce of O(1) and CFS Linux Kernel Schedulers]]
+    to get a better idea of the CFS fomulas.
+
+  CLOCK: [2018-12-06 qui 08:43]--[2018-12-06 qui 11:24] =>  2:41
+  - [READ] About CFS in Linux Kernel Development book 3nd edition.
+  - [READ] Trying to understanding CFS by the code of [[https://github.com/ducminh296/Linux-CFS-Emulator][LinSched]].
+    
+  CLOCK: [2018-12-05 qua 13:57]--[2018-12-05 qua 16:40] =>  2:43
+  - [CODE] Finish ~probsched.py~ and for higher values of priorities
+    P>=128 and runs R>=1012, the results are promissing.
+
+  CLOCK: [2018-12-05 qua 09:20]--[2018-12-05 qua 11:34] =>  2:14
+  - [CODE] Implement ~probsched.py~ to test the hypothesis of scheduling 
+    choice proportional to priority.
+  - [NEW] I've found the [[https://www.mendeley.com/viewer/?fileId=06e1dfd0-e107-9257-4487-c1f0001dab6b&documentId=488f0a1d-4169-39fc-aca0-5dac044e6df7][lecture]] for Probabilist Scheduling that is
+    not directly describing computer systems, but models of simulation
+    over tasks scheduling with PERT included. Take a new view about 
+    include probability and simulations to generate a complete 
+    understanding about the solution.
+
+  CLOCK: [2018-12-04 ter 13:36]--[2018-12-04 ter 16:52] =>  3:16
+  - Thoughts on AVL tree and how to divide priority in the tree.
+  - [BUG] a bug in THOUGHT arises how can I traverse the array of
+    probabilities in low cost, not O(n)?
