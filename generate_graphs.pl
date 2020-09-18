@@ -69,12 +69,29 @@ foreach my $ver (@versions) {
         my $where = $ff->fetch(to => $tmpdir);
         # Uncompress
         my $in = $tmpdir . '/' . $file;
-        my $out = $tmpdir . '/' . `basename $file .tar.xz`;
+        my $out = $tmpdir . '/' . `basename -z $file .tar.xz`;
         print "\tuncompress> $in -> $out\n";
-        `tar xfvJ $in -C $tmpdir`;
+        system("tar xfvJ $in -C $tmpdir > /dev/null");
         # Some files are uncompressed into 'linux' only directory name without the version part.
         # We add the version part to avoid conflict between the versions with the same property.
         system("[ -d $tmpdir/linux ] && mv -v $tmpdir/linux $out");
+
+        # Run cflow to extract the funcion calls
+        my @cs = `find $out -name *.c`;
+        foreach my $c (@cs) {
+            my @funcs = `cflow --depth 2 --omit-arguments $c`;
+            foreach my $func (@funcs) {
+                if ($func =~ /^\s+(.+)\(\)\s*.*/) {
+                    my $called = $1;
+                    print "\t->$called\n";
+                } elsif ($func =~ /^(\w+)\(\).*/) {
+                    my $callee = $1;
+                    print "$callee->\n";
+                } else {
+                    print "func";
+                }
+            }
+        }
         last;
     }
 }
