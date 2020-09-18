@@ -95,15 +95,19 @@ sub gindex_reset {
     $count_ = 0;
 }
 
-sub gindex_save {
-    my $fn = shift;
+sub graph_save {
+    my $graph_name = shift;
     my $wsep = " "; # Word separator
 
+    $graph_name =~ s/\./_/g;
+    my $fn = $PWD . '/' . $DATADIR . '/' . $graph_name . '.dat';
     # Print index
-    system("echo '' > $fn");
+    system("echo '' >". $fn);
     foreach my $name (sort  { $index_{$a} <=> $index_{$b} }keys %index_) {
-        `echo "$index_{$name}$wsep$name" >> $fn`;
+        my $cmd = "echo " . $index_{$name} . $wsep . $name ." >> " . $fn;
+        `$cmd`;
     }
+    glog(1, 'saved', $fn)
 }
 
 # Do a clean
@@ -163,9 +167,8 @@ foreach my $ver (@$versions) {
                 }
             }
         }
-        # Save the vertices' indices        
-        my $fn = $PWD . "/" . $DATADIR . "/" . $kernel_name . ".dat";
-        gindex_save($fn);
+        # Save the graph description
+        graph_save($kernel_name);
         last;
     }
 }
