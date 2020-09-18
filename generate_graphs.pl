@@ -16,45 +16,112 @@ the files' integrity of graph descriptions in 'data' directed were right.
 :TODO: generate checksum from data
 
 =cut
+use strict;
 
-# Preconditions
+# PRECONDITIONS
 foreach my $bin ("cflow", "lynx") {
     if (system("which $bin > /dev/null") != 0) {
-        print STDERR "fatal: $bin is not installed";
-        exit 1;
+        err("$bin is not installed");
     }
 }
 
-# The linux kernel code files are downloaded in a temporary directory.
-my $tmpdir = '/tmp/linux';
-sub tidy {
-    system("[ -d $tmpdir ] && rm -rf $tmpdir");
-}
-# Do a clean
-tidy();
-# Create the source kernel directory again.
-system("[ -d $tmpdir ] || mkdir -v $tmpdir");
+# CONSTANTS
+use Cwd qw(cwd);
+my $PWD = cwd;
+my $DATADIR = 'data';
+my $TMPDIR = '/tmp/linux';
 
-# The versions to be downloaded are listed in the file 'versions.txt'.
-my $fn = "versions.txt";
-my @versions = ();
-open(my $fh, '<', $fn) or die "cannot open file $fn";
-while (<$fh>) {
-    chomp;
-    push @versions, $_;
+# HELPERS
+sub glog {
+    my $level = shift;
+    my $task = shift;
+    my $operand = shift;
+    my $msg = $task . "> " . $operand . "\n";
+
+    for (my $i=0; $i<3; $i++) {
+        last if $i == $level;
+        $msg = "\t" . $msg;
+    }
+    print STDERR $msg;
 }
-close($fh);
+
+# Subroutine tmpdir is used to administer the temporary directory.
+sub tmpdir_do {
+    my $op = shift;
+
+    if ($op == "rm") {
+        # Remove the temporary directory.
+        system("[ -d $TMPDIR ] && rm -rf $TMPDIR");
+    } elsif ($op == "mkdir") {
+        # Create the temporary directory to copy source code.
+        system("[ -d $TMPDIR ] || mkdir -v $TMPDIR");
+    } else {
+        return;
+    }
+}
+
+# Return an array with the Linux versions listed in the 
+# file 'versions.txt', one per line.
+# Line comments begin with '#'.
+sub versions_get {
+    # The versions to be downloaded are listed in the file 'versions.txt'.
+    my $fn = $PWD . '/' . "versions.txt";
+    
+    my @versions = ();
+    open(IN, $fn) or die "cannot open file $fn";
+    while (<IN>) {
+        chomp;
+        push @versions, $_;
+    }
+    close(IN);
+
+    return \@versions;
+}
+
+# PROCEDURES
+my %index_; # Map name to index
+my %name_;  # Map index to name
+my $count_ = 0; # Counter to use as next index
+sub gindex {
+    my $name = shift;
+
+    if (!exists($index_{$name})) {
+        $index_{$name} = $count_++;
+    }
+}
+
+sub gindex_reset {
+    %index_ = ();
+    $count_ = 0;
+}
+
+sub gindex_save {
+    my $fn = shift;
+    my $wsep = " "; # Word separator
+
+    # Print index
+    system("echo '' > $fn");
+    foreach my $name (sort  { $index_{$a} <=> $index_{$b} }keys %index_) {
+        `echo "$index_{$name}$wsep$name" >> $fn`;
+    }
+}
+
+# Do a clean
+tmpdir_do('rm');
+# Create temporary directory.
+tmpdir_do('mkdir');
 
 # Download the source code files of linux kernel.
 use File::Fetch;
 my $baseurl = 'https://mirrors.edge.kernel.org/pub/linux/kernel';
-foreach my $ver (@versions) {
+my $versions = versions_get();
+foreach my $ver (@$versions) {
     next if $ver =~ /^#/; # comments start with '#'
     # :TODO: check version string
-    $url = $baseurl . '/' . $ver;
+    my $url = $baseurl . '/' . $ver;
     print "\ncontext> $ver\n";
     # List compressed kernel files ('*.tar.xz') remote files.
-    @rln_xzs = `lynx -dump $url | grep tar.xz | grep https| grep -v bdflush`;
+    my @rln_xzs = `lynx -dump $url | grep tar.xz | grep https| grep -v bdflush`;
     # Download files and uncompress them.
     for my $rln_xz (@rln_xzs) {
         my $lnk = undef;
@@ -66,32 +133,39 @@ foreach my $ver (@versions) {
         # Download
         print "\tget> $lnk\n";        
         my $ff = File::Fetch->new(uri => $lnk);
-        my $where = $ff->fetch(to => $tmpdir);
+        my $where = $ff->fetch(to => $TMPDIR);
         # Uncompress
-        my $in = $tmpdir . '/' . $file;
-        my $out = $tmpdir . '/' . `basename -z $file .tar.xz`;
+        my $in = $TMPDIR . '/' . $file;
+        my $kernel_name = `basename -z $file .tar.xz`;
+        my $out = $TMPDIR . '/' . $kernel_name;
         print "\tuncompress> $in -> $out\n";
-        system("tar xfvJ $in -C $tmpdir > /dev/null");
+        system("tar xfvJ $in -C $TMPDIR > /dev/null");
         # Some files are uncompressed into 'linux' only directory name without the version part.
         # We add the version part to avoid conflict between the versions with the same property.
-        system("[ -d $tmpdir/linux ] && mv -v $tmpdir/linux $out");
+        system("[ -d $TMPDIR/linux ] && mv -v $TMPDIR/linux $out");
 
+        # Reset index
+        gindex_reset();
         # Run cflow to extract the funcion calls
-        my @cs = `find $out -name *.c`;
-        foreach my $c (@cs) {
-            my @funcs = `cflow --depth 2 --omit-arguments $c`;
+        my @cfiles = `find $out -name *.c`;
+        foreach my $cfile (@cfiles) {
+            my @funcs = `cflow --depth 2 --omit-arguments $cfile`;
             foreach my $func (@funcs) {
-                if ($func =~ /^\s+(.+)\(\)\s*.*/) {
+                if ($func =~ /^\s+(.+)\(\)\s*<(.*)>.*/ || 
+                    $func =~ /^\s+(.+)\(\)\s*.*/) {
                     my $called = $1;
-                    print "\t->$called\n";
+                    gindex($called);
                 } elsif ($func =~ /^(\w+)\(\).*/) {
                     my $callee = $1;
-                    print "$callee->\n";
+                    gindex($callee);
                 } else {
-                    print "func";
+                    print "NOPE> $func";
                 }
             }
         }
+        # Save the vertices' indices        
+        my $fn = $PWD . "/" . $DATADIR . "/" . $kernel_name . ".dat";
+        gindex_save($fn);
         last;
     }
 }
