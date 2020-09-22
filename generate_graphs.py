@@ -80,30 +80,101 @@ def exec_cmd(cmd_and_args):
 
     return lines
 
-def download_and_extract_file(url):
+class Data():
+    '''Wrap operations on data like concatenation of
+    data directory and file name, data file existence
+    and data writing. This class also handle the tokens
+    separators for graph description.
+    '''
+    def __init__(self, tar_xz_url, basedir='data',
+                 file_extension='dat',
+                 arc_separator=' '):
+        self._basedir = basedir
+        self._file_extension = file_extension
+        self._url = tar_xz_url
+        # The path where the file downloaded from url is unpacked.
+        _a = urlparse(tar_xz_url)
+        path = os.path.join(tmpdir.name, os.path.basename(_a.path))
+        self._tar_xz_file = path
+        # Relative path of compressed file without 'tar.xz'
+        path = re.sub(r"\.tar\.xz$", "", path)
+        self._checksum_data_file = \
+            os.path.join(basedir, 
+                         pathlib.PurePath(path).name + '.' + 'md5')
+        self._code_path = os.path.join(tmpdir.name, path)
+        self._data_file = \
+            os.path.join(basedir,
+                         pathlib.PurePath(path).name
+                         + '.' + self._file_extension)
+        self._arc_sep = arc_separator
+
+    def get_code_path(self):
+        '''Return the path where the C files were unpacked.
+        '''
+        return self._code_path
+
+    def get_filename(self):
+        '''Return the data file name where the graph description
+        is saved.
+        '''
+        return self._data_file
+
+    def file_exists(self):
+        '''Return true if the data file already was generated.
+        '''
+        print(self._data_file)
+        return os.path.isfile(self._data_file)
+
+    def get_tar_xz_filename(self):
+        '''Return only the relative path of compressed file containing
+        the code.
+        '''
+        return self._tar_xz_file
+
+    def get_url(self):
+        '''Return the URL of tar.xz file containing the source code.
+        '''
+        return self._url
+
+    def generate_checksum(self):
+        exec_cmd(['md5sum ' + self._data_file + ' > '\
+                  + self._checksum_data_file])
+
+    def save(self, index_dict, adj_list):
+        '''Save the adjacency list to a data file.
+        '''
+        _f = open(self._data_file, 'w')
+        _f.write('* vertices' + ' ' + '{}'.format(len(index_dict)) + '\n')
+        for funcname, idx in index_dict.items():
+            _f.write(str(idx) + ' ' + funcname + '\n')
+        _f.write('\n')
+        _f.write('* arcs\n')
+        for _u in collections.OrderedDict(sorted(adj_list.items())):
+            _vs = adj_list[_u]
+            _f.write(str(_u) + ',' + str(len(_vs)) + ':')
+            for i, _v in enumerate(_vs):
+                if i: # write separator if it is not the 0th element
+                    _f.write(self._arc_sep)
+                _f.write(str(_v))
+            _f.write('\n')
+        _f.close()
+        self.generate_checksum()
+        logging.info('wrote %s', self._data_file)
+
+def download_and_extract_file(data):
     '''Download the file using the url string and unpack it
     in a base directory.
     '''
-    path = None
-    basedir = tmpdir.name
-
+    url = data.get_url()
+    tar_xz_fn = data.get_tar_xz_filename()
     logging.info('downloading and extracting %s', url)
-    _a = urlparse(url)
-    # Set the output file name concatenating temporary dir
-    # name and the file name part of the URL
-    _fn = os.path.join(basedir, os.path.basename(_a.path))
 
     # Download file
-    exec_cmd(['wget -q ' + url + ' -P ' + basedir])
+    exec_cmd(['wget -q ' + url + ' -P ' + tmpdir.name])
 
     # Unpack file
-    logging.debug('unpacking %s', _fn)
-    exec_cmd(['tar xfJ ' + _fn + ' -C ' + basedir])
-
-    # Return name of unpacked dir that is the name of file
-    # without 'tar.xz'
-    path = re.sub(r"\.tar\.xz$", "", _fn)
-    assert path
+    logging.debug('unpacking %s', tar_xz_fn)
+    exec_cmd(['tar xfJ ' + tar_xz_fn + ' -C ' + tmpdir.name])
 
     # Some files are uncompressed into 'linux' only directory
     # name without the version part.
@@ -111,9 +182,7 @@ def download_and_extract_file(url):
     # between the versions with the same property.
     _tmpdir = os.path.join(tmpdir.name, 'linux')
     exec_cmd(['[ -d {dir} ] && mv -v {dir} {path}'
-              .format(dir=_tmpdir, path=path)])
-
-    return path
+              .format(dir=_tmpdir, path=data.get_code_path())])
 
 class Indexer():
     '''Used to wrap indexing and mapping operations.
@@ -148,32 +217,46 @@ class Indexer():
         '''
         return self._index
 
-def adj_save(name, index_dict, adj_list):
-    '''Save the adjacency list to a data file.
+def exec_cflow_and_write_data(data):
+    '''Execute cflow program to print function call from
+    C code, parse the program output and write the
+    functions as vertices and called functions as arcs
+    (adjacency list) to compose a graph description.
     '''
-    # Data file extension
-    extension = 'dat'
-    # Arcs separator
-    asep = ' '
+    # Index of current callee function being parsed
+    cur_callee = -1
+    # Index all functions
+    indexer = Indexer()
+    # Map callee to called functions
+    callee_to_called = {}
 
-    _fn = os.path.join(DATADIR, '{}.{}'.format(name, extension))
+    # Run cflow to extract the funcion calls
+    cfiles = exec_cmd(['find ' + data.get_code_path() + ' -name *.c'])
+    for cfile in cfiles:
+        if not cfile:
+            continue
 
-    _f = open(_fn, 'w')
-    _f.write('* vertices' + ' ' + '{}'.format(len(index_dict)) + '\n')
-    for funcname, idx in index_dict.items():
-        _f.write(str(idx) + ' ' + funcname + '\n')
-    _f.write('\n')
-    _f.write('* arcs\n')
-    for _u in collections.OrderedDict(sorted(adj_list.items())):
-        _vs = adj_list[_u]
-        _f.write(str(_u) + ',' + str(len(_vs)) + ':')
-        for i, _v in enumerate(_vs):
-            if i: # write separator if it is not the 0th element
-                _f.write(asep)
-            _f.write(str(_v))
-        _f.write('\n')
-    _f.close()
-    logging.info('wrote %s', _fn)
+        print(cfile)
+        funcs = exec_cmd(['cflow --depth 2 --omit-arguments {}'.format(cfile)])
+        for func in funcs:
+            if _m := re.match(r"\s+(\w+)\(\).*", func):
+                funcname = _m.group(1)
+                idx = indexer.index(funcname)
+                print(str(cur_callee) + ' ' + funcname + ' ' + str(idx))
+                callee_to_called[cur_callee].append(idx)
+                print('\t' + funcname)
+            elif _m := re.match(r"(\w+)\(\).*", func):
+                funcname = _m.group(1)
+                idx = indexer.index(funcname)
+                if idx not in callee_to_called:
+                    cur_callee = idx
+
+                    callee_to_called[cur_callee] = []
+                    print(funcname)
+            else:
+                logging.info('no group for %s', func)
+
+    data.save(indexer.get_dict(), callee_to_called)
 
 def generate_graphs():
     '''Generate an output containing a graph description of
@@ -196,51 +279,23 @@ def generate_graphs():
                          ' | grep https'
                          ' | grep -v bdflush'.format(baseurl)])
 
-        # Download files and uncompress remote files.
         for url in urls:
-            # Index of current callee function being parsed
-            cur_callee = -1
+            if not url:
+                continue
 
-            # Index all functions
-            indexer = Indexer()
-            # Map callee to called functions
-            callee_to_called = {}
             # Remove numbering and mark at URL left side
             url = re.sub(r"^\s+\d+\.\s+", "", str(url))
 
-            # Download remote file of a kernel version.
-            path = download_and_extract_file(url)
+            data = Data(url)
+            if not data.file_exists():
+                # Download remote file of a kernel version.
+                download_and_extract_file(data)
+                exec_cflow_and_write_data(data)
+            else:
+                logging.info('file %s already exists',
+                             data.get_filename())
 
-            # Run cflow to extract the funcion calls
-            cfiles = exec_cmd(['find ' + path + ' -name *.c'])
-            for cfile in cfiles:
-                if not cfile:
-                    continue
-
-                print(cfile)
-                funcs = exec_cmd(['cflow --depth 2 --omit-arguments {}'.format(cfile)])
-                for func in funcs:
-                    if _m := re.match(r"\s+(\w+)\(\).*", func):
-                        funcname = _m.group(1)
-                        idx = indexer.index(funcname)
-                        print(str(cur_callee) + ' ' + funcname + ' ' + str(idx))
-                        callee_to_called[cur_callee].append(idx)
-                        print('\t' + funcname)
-                    elif _m := re.match(r"(\w+)\(\).*", func):
-                        funcname = _m.group(1)
-                        idx = indexer.index(funcname)
-                        if idx not in callee_to_called:
-                            cur_callee = idx
-
-                            callee_to_called[cur_callee] = []
-                        print(funcname)
-                    else:
-                        logging.info('no group for %s', func)
-
-            # Get the last part of directory name
-            kernel = pathlib.PurePath(path)
-            adj_save(kernel.name, indexer.get_dict(), callee_to_called)
-
+    
 if __name__ == '__main__':
     check_preconditions()
     generate_graphs()
