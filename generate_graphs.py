@@ -4,11 +4,11 @@ generate_graphs - generate function calls graphs from linux kernel
 
 =head1 DESCRIPTION
 
-C<generate_graphs> download linux kernel source files from kernel.org, 
-generate call graphs using C<cflows> and write them into a file in a 
+C<generate_graphs> download linux kernel source files from kernel.org,
+generate call graphs using C<cflows> and write them into a file in a
 format suitable for graph description.
 
-This script may be used for pre-processing only. It can be ignored if 
+This script may be used for pre-processing only. It can be ignored if
 the files' integrity of graph descriptions in 'data' directed were right.
 
 TODO: generate checksum from data
@@ -37,7 +37,7 @@ tmpdir = tempfile.TemporaryDirectory()
 DATADIR = 'data'
 
 def check_preconditions():
-    '''Test if the needed resources to generate the data 
+    '''Test if the needed resources to generate the data
     are available.
     '''
     execs = ["cflow", "lynx"]
@@ -69,7 +69,7 @@ def exec_cmd(cmd_and_args):
     stardard output lines as an array of strings where
     each array element is a line.
     '''
-    logging.debug('executing {}'.format(cmd_and_args))
+    logging.debug('executing %s', ' '.join(cmd_and_args))
     out = subprocess.Popen(cmd_and_args,
                            shell=True,
                            stdout=subprocess.PIPE,
@@ -81,7 +81,7 @@ def exec_cmd(cmd_and_args):
     return lines
 
 def download_and_extract_file(url):
-    '''Download the file using the url string and unpack it 
+    '''Download the file using the url string and unpack it
     in a base directory.
     '''
     path = None
@@ -164,25 +164,25 @@ def adj_save(name, index_dict, adj_list):
         _f.write(str(idx) + ' ' + funcname + '\n')
     _f.write('\n')
     _f.write('* arcs\n')
-    for u in collections.OrderedDict(sorted(adj_list.items())):
-        vs = adj_list[u]
-        _f.write(str(u) + ',' + str(len(vs)) + ':')
-        for i, v in enumerate(vs):
+    for _u in collections.OrderedDict(sorted(adj_list.items())):
+        _vs = adj_list[_u]
+        _f.write(str(_u) + ',' + str(len(_vs)) + ':')
+        for i, _v in enumerate(_vs):
             if i: # write separator if it is not the 0th element
                 _f.write(asep)
-            _f.write(str(v))
+            _f.write(str(_v))
         _f.write('\n')
     _f.close()
     logging.info('wrote %s', _fn)
 
 def generate_graphs():
-    '''Generate an output containing a graph description of 
+    '''Generate an output containing a graph description of
     function calls obtained from the downloaded source code.
     '''
-    # Download the source code files of linux kernel.    
+    # Download the source code files of linux kernel.
     baseurl = 'https://mirrors.edge.kernel.org/pub/linux/kernel'
     # In the 'versions.txt' file there is only major versions like
-    # 'v5.x' for example. The minor version is retrieved from the 
+    # 'v5.x' for example. The minor version is retrieved from the
     # content of major version directory.
     for major_ver in versions_get():
         # :TODO: check version string
@@ -202,14 +202,14 @@ def generate_graphs():
             cur_callee = -1
 
             # Index all functions
-            indexer = Indexer()             
+            indexer = Indexer()
             # Map callee to called functions
             callee_to_called = {}
             # Remove numbering and mark at URL left side
             url = re.sub(r"^\s+\d+\.\s+", "", str(url))
 
             # Download remote file of a kernel version.
-            path = download_and_extract_file(url)            
+            path = download_and_extract_file(url)
 
             # Run cflow to extract the funcion calls
             cfiles = exec_cmd(['find ' + path + ' -name *.c'])
@@ -228,14 +228,14 @@ def generate_graphs():
                         print('\t' + funcname)
                     elif _m := re.match(r"(\w+)\(\).*", func):
                         funcname = _m.group(1)
-                        idx = indexer.index(funcname)                        
+                        idx = indexer.index(funcname)
                         if idx not in callee_to_called:
                             cur_callee = idx
 
                             callee_to_called[cur_callee] = []
                         print(funcname)
                     else:
-                        logging.info('no group for {}'.format(func))
+                        logging.info('no group for %s', func)
 
             # Get the last part of directory name
             kernel = pathlib.PurePath(path)
