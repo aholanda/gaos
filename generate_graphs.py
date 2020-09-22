@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 '''
 generate_graphs - generate function calls graphs from linux kernel
 
@@ -12,97 +11,126 @@ format suitable for graph description.
 This script may be used for pre-processing only. It can be ignored if 
 the files' integrity of graph descriptions in 'data' directed were right.
 
-:TODO: generate checksum from data
+TODO: generate checksum from data
 '''
-import lzma
+import collections
 import os
-from pathlib import Path
+import pathlib
 import re
 import subprocess
+import tempfile
 from urllib.parse import urlparse
-import urllib.request
+from shutil import which
 
 import logging
-"Messages logging"
-log = logging.getLogger("generate_graphs")
-log.setLevel(logging.DEBUG)
+# Messages logging
+logging.basicConfig(level=logging.DEBUG)
 
-import pathlib
-"Current directory"
+# Current directory
 curdir = pathlib.Path().absolute()
 
-import tempfile
-'''Temporary directory to save linux kernel code files 
-from different kernel versions.'''
+# Temporary directory to save linux kernel code files
+# from different kernel versions.
 tmpdir = tempfile.TemporaryDirectory()
 
 # TODO: read datadir from config file
-datadir = 'data'
+DATADIR = 'data'
 
 def check_preconditions():
-    execs = "cflow", "lynx" 
-    
-    from shutil import which
-    for x in execs:
-        if which(x) is None:
-            log.error('{} not found, please install it.'.format(x))
+    '''Test if the needed resources to generate the data 
+    are available.
+    '''
+    execs = ["cflow", "lynx"]
+
+    for _x in execs:
+        if which(_x) is None:
+            logging.error('%s not found, please install it.', _x)
 
 def versions_get():
-    '''Return an array with the Linux versions listed in the 
+    '''Return an array with the Linux versions listed in the
         file 'versions.txt', one per line.
         Line comments begin with '#'.
         The versions to be downloaded are listed in the file 'versions.txt'.
     '''
     versions = []
-    fn = os.path.join(curdir, "versions.txt")
+    _fn = os.path.join(curdir, "versions.txt")
 
-    f = open(fn)
-    for ln in f.readlines():
-        if ln.startswith('#'):
+    _f = open(_fn)
+    for _ln in _f.readlines():
+        if _ln.startswith('#'):
             continue
-        ver = ln.strip()
+        ver = _ln.strip()
         versions.append(ver)
-    f.close()
+    _f.close()
     return versions
 
 def exec_cmd(cmd_and_args):
-    log.debug('executing {}'.format(cmd_and_args))
+    '''Execute a command in the system and return the
+    stardard output lines as an array of strings where
+    each array element is a line.
+    '''
+    logging.debug('executing {}'.format(cmd_and_args))
     out = subprocess.Popen(cmd_and_args,
-            shell=True,
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.STDOUT)
-    stdout, stderr = out.communicate()
-    lines = str(stdout).split(r'\n')
+                           shell=True,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT)
+    stdout, _ = out.communicate() # stdout, stderr
+
+    lines = stdout.decode("utf-8").split('\n')
+
     return lines
 
 def download_and_extract_file(url):
+    '''Download the file using the url string and unpack it 
+    in a base directory.
+    '''
     path = None
+    basedir = tmpdir.name
 
-    print(url)
+    logging.info('downloading and extracting %s', url)
     _a = urlparse(url)
-    # Set the output file name
-    _fn = os.path.join(tmpdir.name, os.path.basename(_a.path))
+    # Set the output file name concatenating temporary dir
+    # name and the file name part of the URL
+    _fn = os.path.join(basedir, os.path.basename(_a.path))
 
     # Download file
-    urllib.request.urlretrieve(url, _fn)
+    exec_cmd(['wget -q ' + url + ' -P ' + basedir])
 
     # Unpack file
-    log.debug('unpacked {}'.format(_fn))
-    lzma.open(_fn)
+    logging.debug('unpacking %s', _fn)
+    exec_cmd(['tar xfJ ' + _fn + ' -C ' + basedir])
 
     # Return name of unpacked dir that is the name of file
     # without 'tar.xz'
-    path = re.sub(r"\.tar\.gz$", "", _fn)
+    path = re.sub(r"\.tar\.xz$", "", _fn)
+    assert path
 
-    assert(path)
+    # Some files are uncompressed into 'linux' only directory
+    # name without the version part.
+    # We add the version part to avoid conflict
+    # between the versions with the same property.
+    _tmpdir = os.path.join(tmpdir.name, 'linux')
+    exec_cmd(['[ -d {dir} ] && mv -v {dir} {path}'
+              .format(dir=_tmpdir, path=path)])
+
     return path
 
 class Indexer():
+    '''Used to wrap indexing and mapping operations.
+    '''
     def __init__(self):
         self._count = 0
         self._index = {}
-        
+
+    def __len__(self):
+        '''Return the number of indexed elements.
+        '''
+        return len(self._index)
+
     def index(self, key):
+        '''Assign the next available count to become key
+        index.
+        '''
         idx = -1
         if key not in self._index:
             idx = self._count
@@ -111,79 +139,108 @@ class Indexer():
         else:
             idx = self._index[key]
 
-        assert(idx >= 0)
+        assert idx >= 0
         return idx
 
-def adj_save(name, indexer, adj_list):
+    def get_dict(self):
+        '''Return the dictionary where the vertices are the keys
+        and the adjacency list are the values.
+        '''
+        return self._index
+
+def adj_save(name, index_dict, adj_list):
+    '''Save the adjacency list to a data file.
+    '''
     # Data file extension
     extension = 'dat'
-    fn = os.path.join(datadir, '{}.{}'.format(name, extension))
+    # Arcs separator
+    asep = ' '
+
+    _fn = os.path.join(DATADIR, '{}.{}'.format(name, extension))
+
+    _f = open(_fn, 'w')
+    _f.write('* vertices' + ' ' + '{}'.format(len(index_dict)) + '\n')
+    for funcname, idx in index_dict.items():
+        _f.write(str(idx) + ' ' + funcname + '\n')
+    _f.write('\n')
+    _f.write('* arcs\n')
+    for u in collections.OrderedDict(sorted(adj_list.items())):
+        vs = adj_list[u]
+        _f.write(str(u) + ',' + str(len(vs)) + ':')
+        for i, v in enumerate(vs):
+            if i: # write separator if it is not the 0th element
+                _f.write(asep)
+            _f.write(str(v))
+        _f.write('\n')
+    _f.close()
+    logging.info('wrote %s', _fn)
 
 def generate_graphs():
-    versions = versions_get()
-
+    '''Generate an output containing a graph description of 
+    function calls obtained from the downloaded source code.
+    '''
     # Download the source code files of linux kernel.    
     baseurl = 'https://mirrors.edge.kernel.org/pub/linux/kernel'
     # In the 'versions.txt' file there is only major versions like
     # 'v5.x' for example. The minor version is retrieved from the 
     # content of major version directory.
-    for major_ver in versions:
+    for major_ver in versions_get():
         # :TODO: check version string
         # Augment base URL with kernel version
-        baseurl = baseurl + '/' + major_ver;
-        log.info('processing major version {}'.format(major_ver));
-    
+        baseurl = baseurl + '/' + major_ver
+        logging.info('processing major version %s', major_ver)
+
         # List compressed kernel ('*.tar.xz') remote files.
         urls = exec_cmd(['lynx -dump {}'
-                                 ' | grep tar.xz'
-                                 ' | grep https'
-                                 ' | grep -v bdflush'.format(baseurl)])
-        
+                         ' | grep tar.xz'
+                         ' | grep https'
+                         ' | grep -v bdflush'.format(baseurl)])
+
         # Download files and uncompress remote files.
         for url in urls:
-            # Remove numbering and mark at URL left side
-            url = re.sub(r"^b'\s+\d+\.\s+", "", str(url))
-            
-            indexer = Indexer()
-            # Adjacency list to link vertices and arcs
-            adj_list = {}
-            # Download remote file of a kernel version.
-            path = download_and_extract_file(url)
+            # Index of current callee function being parsed
+            cur_callee = -1
 
-            # Some files are uncompressed into 'linux' only directory 
-            # name without the version part.
-            # We add the version part to avoid conflict 
-            # between the versions with the same property.
-            _tmpdir = os.path.join(tmpdir.name, 'linux')
-            new_tmpdir = _tmpdir + '-' + major_ver
-            exec_cmd(['[ -d {} ] && mv -v {} {}-{}'
-                    .format(_tmpdir, _tmpdir, _tmpdir, new_tmpdir)]);
-            
-            print(path)
+            # Index all functions
+            indexer = Indexer()             
+            # Map callee to called functions
+            callee_to_called = {}
+            # Remove numbering and mark at URL left side
+            url = re.sub(r"^\s+\d+\.\s+", "", str(url))
+
+            # Download remote file of a kernel version.
+            path = download_and_extract_file(url)            
+
             # Run cflow to extract the funcion calls
-            cfiles = exec_cmd(['find', '{}'.format(path), '-name *.c'])
+            cfiles = exec_cmd(['find ' + path + ' -name *.c'])
             for cfile in cfiles:
+                if not cfile:
+                    continue
+
                 print(cfile)
                 funcs = exec_cmd(['cflow --depth 2 --omit-arguments {}'.format(cfile)])
-                print(funcs)
                 for func in funcs:
-                    if m := re.match(r"\s+(\w+)\(\).*", func):
-                        funcname = m.group(1)
-                        print(funcname)
-                    elif m := re.match(r"(\w+)\(\).*", func):
-                        funcname = m.group(1)
+                    if _m := re.match(r"\s+(\w+)\(\).*", func):
+                        funcname = _m.group(1)
+                        idx = indexer.index(funcname)
+                        print(str(cur_callee) + ' ' + funcname + ' ' + str(idx))
+                        callee_to_called[cur_callee].append(idx)
+                        print('\t' + funcname)
+                    elif _m := re.match(r"(\w+)\(\).*", func):
+                        funcname = _m.group(1)
+                        idx = indexer.index(funcname)                        
+                        if idx not in callee_to_called:
+                            cur_callee = idx
+
+                            callee_to_called[cur_callee] = []
                         print(funcname)
                     else:
-                        log.info('no group for {}'.format(func))
+                        logging.info('no group for {}'.format(func))
 
-            #adj_save(indexer, adj_list);
-            continue
-
-def cleanup():
-    '''Clean all temporary resources like files and directories'''
-    tmpdir.cleanup()
+            # Get the last part of directory name
+            kernel = pathlib.PurePath(path)
+            adj_save(kernel.name, indexer.get_dict(), callee_to_called)
 
 if __name__ == '__main__':
     check_preconditions()
     generate_graphs()
-    #cleanup()
