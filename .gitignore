@@ -1,2 +1,6 @@
+# TODO: remove next 2 lines when project is finished
 *.dat
+*.md5
+
+# local files
 refs
