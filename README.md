@@ -1,13 +1,11 @@
 # Description
 
-This project study various Linux source code versions as a complex networks.
+This project studies various Linux source code versions as a complex networks.
 The functions are considered vertices and function calls edges. All data are
-stored in a SQLite3 database. Static functions were considered in the study.
+stored in [data](data) directory.
 
-`cflow` is used to generate the function call flow and a script were developed
-to parse `cflow` output and insert it in the database.
-
-The script [graph.py](graph.py) may be used to query the database.
+[`cflow`](https://www.gnu.org/software/cflow/) is used to generate the function call 
+flow and a script were developed to parse `cflow` output into data file.
 
 # Troubleshooting
 
@@ -20,14 +18,6 @@ The following lines must be removed to avoid loops in `cflow`:
 * linux-4.14.14.tar.xz
   + line 996: linux-4.14.4/net/ceph/osd_client.c
   + line 2517: linux-4.14.4/net/ceph/osd_client.c
-
-# Reproduction
-
-The experiment is entirely reproducible by running:
-
-````
-./reproducible.pl
-````
 
 ## References
 
