@@ -271,10 +271,11 @@ def generate_graphs():
         urls = exec_cmd(['lynx -dump {}'
                          ' | grep tar.xz'
                          ' | grep https'
-                         ' | grep linux'
                          ' | grep -v bdflush'
                          ' | grep -vi changelog'
-                         ' | grep -v patch'.format(baseurl)])
+                         ' | grep -vi modules'
+                         ' | grep -v patch'
+                         ' | grep -v v1.1.0'.format(baseurl)])
 
         for url in urls:
             if not url:
