@@ -1,6 +1,6 @@
 # Description
 
-This project studies various Linux source code versions as a complex networks.
+This project studies various Linux source code versions as graphs.
 The functions are considered vertices and function calls edges. All data are
 stored in [data](data) directory.
 
