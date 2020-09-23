@@ -6,4 +6,5 @@
 refs
 
 # Python by-products
+__pycache__
 *.pyc
