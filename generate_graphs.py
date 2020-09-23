@@ -114,7 +114,6 @@ class Data():
     def file_exists(self):
         '''Return true if the data file already was generated.
         '''
-        print(self._data_file)
         return os.path.isfile(self._data_file)
 
     def get_tar_xz_filename(self):
@@ -232,15 +231,14 @@ def exec_cflow_and_write_data(data):
         if not cfile:
             continue
 
-        print(cfile)
+        logging.debug('cflow %s', cfile)
         funcs = exec_cmd(['cflow --depth 2 --omit-arguments {}'.format(cfile)])
         for func in funcs:
             if _m := re.match(r"\s+(\w+)\(\).*", func):
                 funcname = _m.group(1)
                 idx = indexer.index(funcname)
-                print(str(cur_callee) + ' ' + funcname + ' ' + str(idx))
                 callee_to_called[cur_callee].append(idx)
-                print('\t' + funcname)
+                logging.debug('\tv> %d.%s', idx, funcname)
             elif _m := re.match(r"(\w+)\(\).*", func):
                 funcname = _m.group(1)
                 idx = indexer.index(funcname)
@@ -248,7 +246,7 @@ def exec_cflow_and_write_data(data):
                     cur_callee = idx
 
                     callee_to_called[cur_callee] = []
-                    print(funcname)
+                    logging.debug('u> %d.%s', cur_callee, funcname)
             else:
                 logging.info('no group for %s', func)
 
