@@ -1,6 +1,11 @@
 '''Configuration attributes are separated to help
 in their modification by looking like a configuration
 file where "key=value" set is conventional.
+
+IMPORTANT: Please, don't modify this file without a
+strong and fair reason to do so.
+After modifying here, you need to make adjustments in
+the Makefile.
 '''
 import tempfile
 
