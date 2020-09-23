@@ -14,27 +14,22 @@ the files' integrity of graph descriptions in 'data' directed were right.
 TODO: generate checksum from data
 '''
 import collections
+import logging
 import os
 import pathlib
 import re
 import subprocess
-import tempfile
 from urllib.parse import urlparse
 from shutil import which
 
-import logging
+# Local import
+import config
+
 # Messages logging
 logging.basicConfig(level=logging.DEBUG)
 
 # Current directory
 curdir = pathlib.Path().absolute()
-
-# Temporary directory to save linux kernel code files
-# from different kernel versions.
-tmpdir = tempfile.TemporaryDirectory()
-
-# TODO: read datadir from config file
-DATADIR = 'data'
 
 def check_preconditions():
     '''Test if the needed resources to generate the data
@@ -86,27 +81,24 @@ class Data():
     and data writing. This class also handle the tokens
     separators for graph description.
     '''
-    def __init__(self, tar_xz_url, basedir='data',
-                 file_extension='dat',
-                 arc_separator=' '):
-        self._basedir = basedir
-        self._file_extension = file_extension
+    def __init__(self, tar_xz_url):
+        self._basedir = config.DATADIR
+        self._file_extension = config.DATA_FILE_EXT
         self._url = tar_xz_url
         # The path where the file downloaded from url is unpacked.
         _a = urlparse(tar_xz_url)
-        path = os.path.join(tmpdir.name, os.path.basename(_a.path))
+        path = os.path.join(config.TMPDIR, os.path.basename(_a.path))
         self._tar_xz_file = path
         # Relative path of compressed file without 'tar.xz'
         path = re.sub(r"\.tar\.xz$", "", path)
         self._checksum_data_file = \
-            os.path.join(basedir, 
+            os.path.join(self._basedir,
                          pathlib.PurePath(path).name + '.' + 'md5')
-        self._code_path = os.path.join(tmpdir.name, path)
+        self._code_path = os.path.join(config.TMPDIR, path)
         self._data_file = \
-            os.path.join(basedir,
+            os.path.join(self._basedir,
                          pathlib.PurePath(path).name
                          + '.' + self._file_extension)
-        self._arc_sep = arc_separator
 
     def get_code_path(self):
         '''Return the path where the C files were unpacked.
@@ -137,6 +129,9 @@ class Data():
         return self._url
 
     def generate_checksum(self):
+        '''Run program "md5sum" on data file to generate its checksum
+        and save in a sepated file.
+        '''
         exec_cmd(['md5sum ' + self._data_file + ' > '\
                   + self._checksum_data_file])
 
@@ -146,7 +141,8 @@ class Data():
         _f = open(self._data_file, 'w')
         _f.write('* vertices' + ' ' + '{}'.format(len(index_dict)) + '\n')
         for funcname, idx in index_dict.items():
-            _f.write(str(idx) + ' ' + funcname + '\n')
+            _f.write(str(idx) + config.GRAPH_INDEX_SEP
+                     + funcname + '\n')
         _f.write('\n')
         _f.write('* arcs\n')
         for _u in collections.OrderedDict(sorted(adj_list.items())):
@@ -154,7 +150,7 @@ class Data():
             _f.write(str(_u) + ',' + str(len(_vs)) + ':')
             for i, _v in enumerate(_vs):
                 if i: # write separator if it is not the 0th element
-                    _f.write(self._arc_sep)
+                    _f.write(config.GRAPH_ARC_SEP)
                 _f.write(str(_v))
             _f.write('\n')
         _f.close()
@@ -170,17 +166,17 @@ def download_and_extract_file(data):
     logging.info('downloading and extracting %s', url)
 
     # Download file
-    exec_cmd(['wget -q ' + url + ' -P ' + tmpdir.name])
+    exec_cmd(['wget -q ' + url + ' -P ' + config.TMPDIR])
 
     # Unpack file
     logging.debug('unpacking %s', tar_xz_fn)
-    exec_cmd(['tar xfJ ' + tar_xz_fn + ' -C ' + tmpdir.name])
+    exec_cmd(['tar xfJ ' + tar_xz_fn + ' -C ' + config.TMPDIR])
 
     # Some files are uncompressed into 'linux' only directory
     # name without the version part.
     # We add the version part to avoid conflict
     # between the versions with the same property.
-    _tmpdir = os.path.join(tmpdir.name, 'linux')
+    _tmpdir = os.path.join(config.TMPDIR, 'linux')
     exec_cmd(['[ -d {dir} ] && mv -v {dir} {path}'
               .format(dir=_tmpdir, path=data.get_code_path())])
 
@@ -262,15 +258,13 @@ def generate_graphs():
     '''Generate an output containing a graph description of
     function calls obtained from the downloaded source code.
     '''
-    # Download the source code files of linux kernel.
-    baseurl = 'https://mirrors.edge.kernel.org/pub/linux/kernel'
     # In the 'versions.txt' file there is only major versions like
     # 'v5.x' for example. The minor version is retrieved from the
     # content of major version directory.
     for major_ver in versions_get():
         # :TODO: check version string
         # Augment base URL with kernel version
-        baseurl = baseurl + '/' + major_ver
+        baseurl = config.BASEURL + '/' + major_ver
         logging.info('processing major version %s', major_ver)
 
         # List compressed kernel ('*.tar.xz') remote files.
@@ -295,7 +289,6 @@ def generate_graphs():
                 logging.info('file %s already exists',
                              data.get_filename())
 
-    
 if __name__ == '__main__':
     check_preconditions()
     generate_graphs()
