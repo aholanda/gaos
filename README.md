@@ -1,6 +1,6 @@
 # Description
 
-This project study various Linux source code versions as a complex newtorks.
+This project study various Linux source code versions as a complex networks.
 The functions are considered vertices and function calls edges. All data are
 stored in a SQLite3 database. Static functions were considered in the study.
 
