@@ -1,7 +1,7 @@
 # Description
 
 This project studies various Linux source code versions as graphs.
-The functions are considered vertices and function calls edges. All data are
+The functions are considered vertices and function calls arcs. All data are
 stored in [data](data) directory.
 
 [`cflow`](https://www.gnu.org/software/cflow/) is used to generate the function call 
