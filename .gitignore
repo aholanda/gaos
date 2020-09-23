@@ -8,3 +8,14 @@ refs
 # Python by-products
 __pycache__
 *.pyc
+
+# C
+*.o
+
+# CWEB
+*.c
+*.h
+*.idx
+*.scn
+*.tex
+*.ttp
