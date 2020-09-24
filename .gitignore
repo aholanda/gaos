@@ -6,4 +6,19 @@
 refs
 
 # Python by-products
+__pycache__
 *.pyc
+
+# C
+*.o
+
+# CWEB
+*.c
+*.h
+*.idx
+*.log
+*.pdf
+*.scn
+*.tex
+*.toc
+*.ttp
