@@ -25,11 +25,11 @@ from shutil import which
 # Local import
 import config
 
+# Assign the path where this script is running.
+CURDIR = pathlib.Path().absolute()
+
 # Messages logging
 logging.basicConfig(level=logging.DEBUG)
-
-# Current directory
-curdir = pathlib.Path().absolute()
 
 def check_preconditions():
     '''Test if the needed resources to generate the data
@@ -48,7 +48,7 @@ def versions_get():
         The versions to be downloaded are listed in the file 'versions.txt'.
     '''
     versions = []
-    _fn = os.path.join(curdir, "versions.txt")
+    _fn = os.path.join(CURDIR, "versions.txt")
 
     _f = open(_fn)
     for _ln in _f.readlines():
@@ -91,13 +91,15 @@ class Data():
         self._tar_xz_file = path
         # Relative path of compressed file without 'tar.xz'
         path = re.sub(r"\.tar\.xz$", "", path)
+        # String used to name the graph
+        self._name = pathlib.PurePath(path).name
         self._checksum_data_file = \
             os.path.join(self._basedir,
-                         pathlib.PurePath(path).name + '.' + 'md5')
+                          self._name + '.' + 'md5')
         self._code_path = os.path.join(config.TMPDIR, path)
         self._data_file = \
             os.path.join(self._basedir,
-                         pathlib.PurePath(path).name
+                         self._name
                          + '.' + self._file_extension)
 
     def get_code_path(self):
@@ -115,6 +117,13 @@ class Data():
         '''Return true if the data file already was generated.
         '''
         return os.path.isfile(self._data_file)
+
+    def get_name(self):
+        '''Return the name used to identify the data. This
+        name has no system information like directory path or
+        file extension.
+        '''
+        return self._name
 
     def get_tar_xz_filename(self):
         '''Return only the relative path of compressed file containing
@@ -134,15 +143,26 @@ class Data():
         exec_cmd(['md5sum ' + self._data_file + ' > '\
                   + self._checksum_data_file])
 
-    def save(self, index_dict, adj_list):
+    def save(self, indexer, adj_list):
         '''Save the adjacency list to a data file.
         '''
+        index_dict = indexer.get_dict()
+
         _f = open(self._data_file, 'w')
+        # Store the total strings' length
+        strlen = indexer.get_nchars() + len(self._name) + 1
+        _f.write('* string\n' + str(strlen) + '\n')
+        _f.write('\n')
+        # Name the data
+        _f.write('* name\n' + self._name + '\n')
+        _f.write('\n')
+        # Mark the start of vertices' listing
         _f.write('* vertices' + ' ' + '{}'.format(len(index_dict)) + '\n')
         for funcname, idx in index_dict.items():
             _f.write(str(idx) + config.GRAPH_INDEX_SEP
                      + funcname + '\n')
         _f.write('\n')
+        # Mark the begining of adjacency list (arcs)
         _f.write('* arcs\n')
         for _u in collections.OrderedDict(sorted(adj_list.items())):
             _vs = adj_list[_u]
@@ -185,6 +205,9 @@ class Indexer():
     def __init__(self):
         self._count = 0
         self._index = {}
+        # Count the total number of characters of the
+        # indexed keys.
+        self._nchars = 0
 
     def __len__(self):
         '''Return the number of indexed elements.
@@ -197,8 +220,14 @@ class Indexer():
         '''
         idx = -1
         if key not in self._index:
+            # The number of characters in "key" + 1 to take into
+            # account the NULL terminator in the C programs.
+            self._nchars = self._nchars + len(key) + 1
+            # Get the next available count number
             idx = self._count
+            # Assign the index number to "key" using a dictionary.
             self._index[key] = idx
+            # Increment to the next available index
             self._count = self._count + 1
         else:
             idx = self._index[key]
@@ -211,6 +240,12 @@ class Indexer():
         and the adjacency list are the values.
         '''
         return self._index
+
+    def get_nchars(self):
+        '''Return the total number of characters in the indexed
+        elements.
+        '''
+        return self._nchars
 
 def exec_cflow_and_write_data(data):
     '''Execute cflow program to print function call from
@@ -250,7 +285,7 @@ def exec_cflow_and_write_data(data):
             else:
                 logging.info('no group for %s', func)
 
-    data.save(indexer.get_dict(), callee_to_called)
+    data.save(indexer, callee_to_called)
 
 def generate_graphs():
     '''Generate an output containing a graph description of
