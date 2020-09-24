@@ -16,6 +16,9 @@ __pycache__
 *.c
 *.h
 *.idx
+*.log
+*.pdf
 *.scn
 *.tex
+*.toc
 *.ttp
