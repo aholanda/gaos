@@ -51,7 +51,12 @@ of arcs that goes from the vertex. After the colon, there is a list of
  is not common.
 
 @<types@>=
-enum {LIMBO=00, STRING=01, NAME=02, VERTICES=04, ARCS=010};
+enum {STRING=0, NAME=1, VERTICES=2, ARCS=3, LIMBO=NCTXS=4};
+
+@ @<internal data@>=
+static char *context_marks[NCTXS] = {
+    "* string", "* name", "* vertices", "* arcs"
+};
 
 @ @p
 #include <ctype.h>
@@ -75,49 +80,64 @@ extern Graph **read_dir(const char *dirname);
 
 #endif
 
+@ @<local data@>=
+char *buffer;
+char *cp; /* character pointer */
+int lineno; /* line number */
+
 @ A |buffer| with macro |MAXLINE| as size is used to read 
 the characters of the input file.
 
 @d MAXLINE 512
 
-@<internal data@>=
-static unsigned char buffer[MAXLINE+1];
-static char *cp; /* character pointer */
-static int lineno; /* line number */
-
-@ @<functions@>=
+@<functions@>=
 Graph *input_file(const char *filename) {
     FILE *fp;
     Graph *graph;
-    int ctx = LIMBO; /* context in file */
+    int ctx = ATTRS; /* starting context */
+    @<local data@>@;    
 
     fp = fopen(filename, "r");
     if (fp == NULL) {
         fprintf(stderr, "Could not open %s\n", filename);
         exit(EXIT_FAILURE);
     }
+    buffer = (char*)calloc(MAXLINE+1, sizeof(char));
     while (fgets((char*)buffer, MAXLINE, fp)) {
-        newline();
+        @<start parsing a new line@>@;
 
-        if (is_comment())
+        if (is_comment(cp))
             continue;
         
+        if (ctx == ATTRS)
+            @<extract the value from key-value pair@>@;
+        elsif (ctx == VERTICES)
+            @<parse the line and add the new vertex to graph@>@;
+        elsif (ctx == VERTICES)
+            @<parse the line and add the arcs to vertex@>@;
+        else {
+            fprintf(stderr, "unknown context %d\n", ctx);
+            exit(EXIT_FAILURE);
+        }
+
+        @<check if the line contains a context transition@>@;
     }
+    free(buffer);
     fclose(fp);
 
     return graph;
 }
 
-@ @<static functions@>=
-static void skip_space() {
+@ @<skip spaces@>=
+{
     while (isspace(cp))
         cp++;
 }
 
-static void newline() {
+@ @<start parsing a new line@>=
+{
     lineno++;
     cp = &buffer[0];
-    skip_space();
 }
 
 @ Lines that begin with '\#' are ignored during the parsing.
@@ -125,6 +145,89 @@ static void newline() {
 @d COMMENT_SYM '#'
 
 @<static functions@>=
-static int is_comment() {
+static int is_comment(char *cp) {
+    @<skip spaces@>@;
     return *cp == COMMENT_SYM;
+}
+
+@ @<check if the line contains a context transition@>=
+{
+    register int i;
+    for (i=0; i<NCTXS; i++)
+        if(strstr(cp, context_marks[i]) != NULL) {
+            ctx = i;
+            break;
+        }
+    
+    if (ctx==VERTICES)
+        @<create the graph@>@;
+}
+
+@ @<create the graph@>=
+ {
+     graph = graph_new(graph_name, nverts, nchars);
+ }
+
+@ <local...@>=
+/* name to assign to the graph */
+char graph_name[MAXTOKEN];
+ /* key and value in string representation of them */
+char *keyval[2];
+ /* number of vertices */ 
+long nverts;
+/* number of characters to be used in the graph string buffer */
+long nchars; 
+
+@ @<extract the value...@>=
+{
+    keyval = extract_keyval(cp, keyval);
+    if (strncmp(keyval[0], attrs[NAME], MAXTOK)==0) {
+        strncpy(graph_name, keyval[1], MAXTOK);
+    } elsif (strncmp(keyval[0], attrs[NVERTS], MAXTOK)==0) {
+        nverts = atol(keyval[1]);
+        assert(nverts > 0);
+    }  elsif (strncmp(keyval[0], attrs[NCHARS], MAXTOK)==0) {
+        nverts = atol(keyval[1]);
+        assert(nchars > 0);
+    } else {
+        fprintf(stderr, "found \"%s=%s\" as attribute at line %d", 
+                lineno, keyval[0], keyval[1]);
+    }
+}
+
+@ @<static...@>=
+static char *extract_keyval(char *line, char *keyval[], char sep) {
+    char *tok; /* token string */
+    char *rkv; /* replica of keyval */
+    int i=0;
+
+    /* duplicate the line string */
+    rkv = strndup(cp, MAXTOK);
+    while ((tok = strtok_r(rkv, "=\t\r\n", &rkv)))
+        keyval[i] = tok;
+
+#warning remove this printf    
+    printf("%s\n", tok);
+
+    return tok;
+}
+
+@ @<local...@>=
+long vid; /* vertex identification */
+
+@ @<parse the line and add the new vertex to graph@>=
+{
+    keyval = extract_keyval(cp, keyval, " ");
+    vid = atol(keyval[0]);
+    vertex_new(vid, name);
+}
+
+@ @<parse the line and add the arcs to vertex@>=
+{
+    /* key-value for "vertex_id,number_of_arcs" part */
+    register char *keyval0;
+    keyval = extract_keyval(cp, keyval, ":");
+    keyval0 = strndup(keyval[0], MAXTOK);
+    vid = atol(keyval[0]);
+    vertex_new(id, name);
 }
