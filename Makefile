@@ -1,9 +1,10 @@
 CFLAGS := -Wall -g
+TEX := xetex
 
 .SUFFIXES:
-.SUFFIXES: .c .o
+.SUFFIXES: .c .dvi .o .pdf .tex .w
 
-vpath %.w src:lib
+vpath %.w mod
 
 # C
 %.c : %.w
@@ -14,9 +15,14 @@ vpath %.w src:lib
 
 %.h : %.c
 
+input.c: graph.c
+
 # TeX
 %.tex : %.w
 	$(CWEAVE) $<
+
+%.pdf: %.tex
+	$(TEX) $<
 
 # Data
 check_data:
