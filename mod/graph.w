@@ -40,53 +40,10 @@ functions, input/output and string handling are included
 
 @* Data structures. The basic types of {\sc GRAPH} module
 are \&{Vertex}, \&{Arcs} and \&{Graph}. The data structures 
-adapt to the format of graph representation in the data files. 
- An example of this file format is presented as follows:
+adapt to the format of graph representation in the data 
+files (see {\tt input} module for the format description). 
 
-\smallskip
-\begingroup
-\obeylines\tt
-* string
-20
-
-* name
-mygraph
-
-* vertices
-0 foo
-1 bar
-2 baz
-
-* arcs
-0,2: 1 2
-1,1: 2
-2,0:
-\endgroup\smallskip
-
-The changing in the context are marked by the symbol ``*''. The first 
-part is called {\tt string} and in the next line is presented the value 
-for the context. This value represents the number of characters in the 
-vertices' names and graph name plus the {\tt NULL} terminator for each 
-name. The value is used to allocate memory for a string buffer and load 
-the strings in an unique place. Any element that uses a name in the string 
-buffer, catch a pointer the the begining of the string representing the 
-name in the string buffer.
-
-The section ``{\tt * name}'' holds the graph name to be assigned to the 
-{\tt name} field of \&{Graph} structure. In the section ``{\tt * vertices}''
-there is a listing of the graph's vertices. The first field represents the 
-vertex index and the second the vertex name. The default separator is a space.
-
-The section ``{\tt *arcs}'' presents an adjacency list to represent the arcs 
-in the graph. The graph of function call is considered to be directed. The 
-first field element is the vertex index and after the comma is the number 
-of arcs that goes from the vertex. After the colon, there is a list of 
- vertices' indices representing the tip of an arc separated by space. 
- No arc length is considered because the number of calls of a function to 
- another can be aproximated to one, more than one calls to the same function
- is not common.
-
- @ The \&{Vertex} structure has a name to identify it and 
+@ The \&{Vertex} structure has a name to identify it and 
  a array of indices representing the destination of the arcs.
   The |name| is a pointer to string buffer an address where 
   the begining of the string representing the name is located.
@@ -164,6 +121,25 @@ Graph *graph_new(char *name, long nvertices,
     return g;
 }
 
+@ @<functions@>=
+void graph_free(Graph *g) {
+    Vertex *v;
+    long i;
+
+    if (g) {
+        for (i=0; i<g->n; i++) {
+            v = &g->vertices[i];
+            if (v->arcs)
+                free(v->arcs)
+        }
+        if (g->strbuf)
+            strbuf_free(g->strbuf);
+
+        if (g->vertices)
+            free(g->vertices);
+    }
+}
+
 @ @<types@>=
 typedef struct strbuf_struct {
     /* starting of where to copy the strings */
@@ -174,13 +150,17 @@ typedef struct strbuf_struct {
     size_t cap;
 } StrBuf;
 
-@ @<static functions@>=
+@ 
+
+@d EXTRA_SPACE 256
+
+@<static functions@>=
 static char *strbuf_new(size_t capacity) {
     StrBuf *sb;
 
     sb = calloc(1, sizeof(StrBuf));
     sb->cap = capacity;
-    sb->buffer = calloc(sb->cap, sizeof(char));
+    sb->buffer = calloc(sb->cap + EXTRA_SPACE, sizeof(char));
     sb->next_avail = sb->buffer;
     return sb;
 }
@@ -215,37 +195,4 @@ static void strbuf_free(Strbuf *strbuf) {
             free(strbuf->buffer);
         free(strbuf);
     }
-}
-
-@ @<functions@>=
-void graph_free(Graph *g) {
-    Vertex *v;
-    long i;
-
-    if (g) {
-        for (i=0; i<g->n; i++) {
-            v = g->vertices[i];
-            if (v->arcs)
-                free(v->arcs)
-        }
-        if (g->strbuf)
-            strbuf_free(g->strbuf);
-
-        if (g->vertices)
-            free(g->vertices);
-    }
-}
-
-@* Input.
-
-@<exported functions@>=
-extern Graph *graph_read(const char *filename);
-
-@ @<functions@>=
-Graph *graph_read(const char *fname) {
-    FILE *f;
-
-    f = fopen(fname, 'r');
-
-    fclose(f);
 }
