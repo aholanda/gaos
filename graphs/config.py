@@ -3,7 +3,9 @@ read configuration values and convert them to other
 ways to access becoming them read-only.
 '''
 
+import ast
 import configparser
+import tempfile
 
 class Config:
     '''Read the configuration file "graphs.conf" and
@@ -19,14 +21,26 @@ class Config:
         '''Return the data directory set in the configuration
         file.
         '''
-        return self._mate[self._data_dir]
+        return self._mate['root'][self._data_dir]
 
-    def qw(self, strval):
+    def get_list(self, context, key):
+        '''Return a list for the key in the context section
+        using ast.literal() to convert the string to list.
+        '''
+        return ast.literal_eval(self._mate[context][key])
+
+    def quote(self, strval):
         '''Surround a string value with double quotes.
         '''
         return '"' + strval + '"'
 
-    def write_C_header(self):
+    def get_tmpdir(self):
+        '''Return temporary directory to be used by any project.
+        '''
+        return tempfile.TemporaryDirectory().name
+
+    # TODO: decide where and when to run write_c_header
+    def write_c_header(self):
         '''Write a C header file with the configuration
         contents of "graphs.conf".
         '''
@@ -35,6 +49,6 @@ class Config:
 
         _f = open('config.h')
         _f.write(warn + '\n')
-        _f.write('#include ' +  self.qw(self._data_dir)
+        _f.write('#include ' +  self.quote(self._data_dir)
                  + self.get_data_dir() + '\n')
         _f.close()
