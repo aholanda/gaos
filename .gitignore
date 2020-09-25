@@ -8,6 +8,7 @@ refs
 # Python by-products
 __pycache__
 *.pyc
+sandbox.py
 
 # C
 *.o
@@ -22,3 +23,4 @@ __pycache__
 *.tex
 *.toc
 *.ttp
+
