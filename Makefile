@@ -4,9 +4,11 @@ TEX := xetex
 .SUFFIXES:
 .SUFFIXES: .c .dvi .o .pdf .tex .w
 
-vpath %.w mod
+vpath %.w linux test
 
-# C
+#####
+# C #
+#####
 %.c : %.w
 	$(CTANGLE) $<
 
@@ -15,29 +17,49 @@ vpath %.w mod
 
 %.h : %.c
 
-input.c: graph.c
-
-# TeX
+#######
+# TeX #
+#######
 %.tex : %.w
 	$(CWEAVE) $<
 
 %.pdf: %.tex
 	$(TEX) $<
 
-# Data
+########
+# Data #
+########
 check_data:
 	for md5 in `ls data/*.md5`; do md5sum -c $${md5}; done
 
-# Admin
+############
+# Programs #
+############
+# Linux components
+linux_components.c: graph.c
+
+linux_components: linux_components.o graph.o
+	$(CC) $(CFLAGS) $^ -o $@
+TRASH += linux_components
+
+# test
+graph_test: graph_test.o graph.o
+	$(CC) $(CFLAGS) $^ -o $@
+TRASH += graph_test
+
+#########
+# Admin #
+#########
 clean:
 	$(RM) -rv *.pyc __pycache__\
 				*.c *.h *.o \
-				*.idx *.scn *.tex *.ttp
+				*.idx *.scn *.tex *.ttp \
+				$(TRASH)
 
 TIDY: clean
-	$(RM) -v qdata/*.dat data/*.md5
+	$(RM) -v data/linux-*.dat data/linux-*.md5
 
 .PHONY: check_data
 
 # stay quiet
-$(V).SILENT:
+#$(V).SILENT:
