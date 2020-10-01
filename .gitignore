@@ -24,3 +24,6 @@ sandbox.py
 *.toc
 *.ttp
 
+# Programs
+graph_test
+linux_components
