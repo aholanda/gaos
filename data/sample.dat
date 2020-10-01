@@ -1,0 +1,12 @@
+nvertices=3
+narcs=4
+
+* vertices
+0 foo
+1 bar
+2 baz
+
+* arcs
+0:1,2
+1:2
+2:2
