@@ -38,12 +38,14 @@ check_data:
 # Linux components
 linux_components.c: graph.c
 
-linux_components: linux_components.o graph.o
+linux_components: graph.o linux_components.o
 	$(CC) $(CFLAGS) $^ -o $@
 TRASH += linux_components
 
 # test
-graph_test: graph_test.o graph.o
+graph_test.c: graph.c
+
+graph_test: graph.o graph_test.o
 	$(CC) $(CFLAGS) $^ -o $@
 TRASH += graph_test
 
