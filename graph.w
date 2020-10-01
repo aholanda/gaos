@@ -291,7 +291,14 @@ Graph *graph_read(const char *filename, int load_names) {
     }
     buffer = (char*)calloc(MAXLINE+1, sizeof(char));
     while (fgets((char*)buffer, MAXLINE, fp)) {
-        @<update variables...@>@;
+        lineno++;
+        
+        if (buffer[0] == '\r' || buffer[0] == '\n')
+            continue;
+
+        cp = &buffer[0];
+
+        @<check if the line contains a context switch@>@;
 
         if (ctx == ATTRS)
             @<extract the value from key-value pair@>@;
@@ -305,7 +312,6 @@ Graph *graph_read(const char *filename, int load_names) {
             fprintf(stderr, "unknown context %d\n", ctx);
             exit(EXIT_FAILURE);
         }
-        @<check if the line contains a context transition@>@;
     }
     free(buffer);
     fclose(fp);
@@ -313,37 +319,29 @@ Graph *graph_read(const char *filename, int load_names) {
     return g;
 }
 
-@ @<skip spaces@>=
-{
-    while (isspace(cp))
-        cp++;
-}
-
-@ @<update variables to start parsing a new line@>=
-{
-    lineno++;
-    cp = &buffer[0];
-}
-
-@ @<check if the line contains a context transition@>=
+@ @<check if the line contains a context switch@>=
 {
     register int i;
     for (i=1; i<=ARCS; i++)
         if(strstr(cp, context_marks[i]) != NULL) {
             ctx = i;
+    
+            if (ctx==VERTICES)
+                @<create the graph@>@;
+
             break;
         }
     
-    if (ctx==VERTICES)
-        @<create the graph@>@;
 }
 
 @ @<create the graph@>=
  {
 #warning parse file name to extract graph name     
-     register char* graph_name = "graph";
      g = graph_new(graph_name, nverts, narcs, load_names);
  }
+
+@ @<internal data@>=
+static char graph_name[MAXNAME] = "graph"; 
 
 @ @<local data@>=
  /* key and value */
@@ -356,7 +354,7 @@ long narcs;
 
 @ @<extract the value...@>=
 {
-    sscanf(buffer, "%s=%ld", name, &val);
+    sscanf(buffer, "%256[^=]=%ld", name, &val);
     if (strncmp(name, attr_num_names[VERTICES], MAXNAME)==0) {
         nverts = val;
         assert(nverts > 0);
