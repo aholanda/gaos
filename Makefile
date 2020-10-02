@@ -1,5 +1,6 @@
 CFLAGS := -Wall -g
 TEX := xetex
+CC := clang
 
 .SUFFIXES:
 .SUFFIXES: .c .dvi .o .pdf .tex .w
