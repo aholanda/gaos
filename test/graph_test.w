@@ -13,6 +13,7 @@ int main(int argc, char **argv) {
 
     g = graph_read("data/sample.dat", 1);
 
+    printf("G(%s)\n", g->name);
     for (i=0; i<g->n; i++) {
         v = &g->vertices[i];
         printf("%s:", v->name);
