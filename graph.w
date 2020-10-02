@@ -38,6 +38,12 @@ functions, input/output and string handling are included
 
 @<macros@>@;
 @<exported types@>@;
+
+extern struct graph *graph_new(char *name, long nvertices,
+                                long narcs, int load_names);
+extern void graph_free(Graph*);
+extern Arc*graph_add_arc(Graph*, long from, long to);
+extern Name*graph_index_name(Graph*, long index, char*name);
 @<exported functions@>@;
 
 #endif
@@ -73,11 +79,15 @@ typedef struct arc_struct {
     struct arc_struct *next; /* linked list of arcs pointers */
 } Arc;
 
-@ @<static functions@>=
+@ A new arc is retrieved from the graph |arcs| field and 
+returned as a pointer. The |Vertex| |v| is set to the new arc
+|tip| field. A assertion of capacity to add a new arc is performed.
+
+@<static functions@>=
 static Arc *arc_new(Graph *g, Vertex *v) {
     Arc *a;
 
-    assert(g->m+1 < g->acap);
+    assert(g->m < g->acap);
 
     a = &g->arcs[g->m++];
     a->tip = v;
@@ -86,7 +96,14 @@ static Arc *arc_new(Graph *g, Vertex *v) {
     return a;
 }
 
-@ @<functions@>=
+@ To add an arc to vertex with index |from|, its 
+|Vertex| pointer |v| must be retrieved as well the 
+|to| |Vertex| pointer |u|. Then |u| is added in the 
+adjacency list of |v| that is represented by the 
+|arcs| field. There is no verification of duplicity 
+of arcs and the arcs' length or weight are not considered.
+
+@<functions@>=
 Arc *graph_add_arc(Graph *g, long from, long to) {
     Arc *a, *b;
     Vertex *u, *v;
@@ -104,7 +121,14 @@ Arc *graph_add_arc(Graph *g, long from, long to) {
     return a;
 }
 
-@ @<exported types@>=
+@ |Graph| type is composed of array of vertices, array 
+of arcs, array of vertices' names, size information about 
+these array and a Boolean to inform if the names are present. 
+Sometimes one may wish to create a graph without names to 
+speed up the initialization or simply to load a integer graph, 
+where the vertices has their indices as representation.
+
+@<exported types@>=
 struct name_struct;
 typedef struct graph {
     char name[MAXNAME];
@@ -126,12 +150,16 @@ typedef struct graph {
 @ @<macros@>=
 #define MAXNAME 256
 
-@ @<exported functions@>=
-extern struct graph *graph_new(char *name, long nvertices,
-                                long narcs, int load_names);
-extern void graph_free(Graph*);
+@ |Graph| type concentrates most of the data needed to 
+store its information. The number of vertices must be
+passed as parameter to allocate the number of vertices 
+and an array to store the vertices' names. The arcs are
+also allocated upfront as an array and then used by 
+|Vertex| type as a pointer to its value location. 
+The vertices' names loading is optional and the Boolean
+variable |load_names| controls this behavior.
 
-@ @<functions@>=
+@<functions@>=
 Graph *graph_new(char *name, 
                  long nvertices,
                  long narcs,
@@ -159,7 +187,11 @@ Graph *graph_new(char *name,
     return g;
 }
 
-@ @<functions@>=
+@ We tried to concentrate the allocated variables in the 
+|Graph| type to stick the memory freed to few possible 
+points in the code.
+
+@<functions@>=
 void graph_free(Graph *g) {
     if (g) {
         if (g->arcs)
@@ -168,12 +200,22 @@ void graph_free(Graph *g) {
         if (g->vertices)
             free(g->vertices);
 
+        if (g->has_names && g->names)
+            free(g->names);
+
         free(g);
     }
 }
 
-@ @<functions@>=
-Name *graph_index_name(Graph *g, long idx, const char *name) {
+@ If the graph field |has_names| is set to true, the 
+vertices' name are copied to |names| array in the graph 
+where the array index is also the vertex index and the 
+limit in the string to be copied is set according to 
+|MAXNAME|. The |Vertex| type uses a pointer to its name 
+in the array of |names| to set its field |name|.
+
+@<functions@>=
+Name *graph_index_name(Graph *g, long idx, char *name) {
     Name *n;
     Vertex *v;
 
@@ -193,7 +235,11 @@ Name *graph_index_name(Graph *g, long idx, const char *name) {
     return n;
 }
 
-@ @<exported types@>=
+@ |Name| type wrap a string that represents the |Vertex| 
+name. It is used in the |names| array graph field to store 
+the vertices' names.
+
+@<exported types@>=
 typedef struct name_struct {
     char data[MAXNAME];
 } Name;
@@ -270,7 +316,7 @@ extern Graph *graph_read(const char *filename, int load_names);
 @ @<local data@>=
 char *buffer;
 char *cp; /* character pointer */
-int lineno; /* line number */
+int lineno=0; /* line number */
 
 @ A |buffer| with macro |MAXLINE| as size is used to read 
 the characters of the input file.
@@ -298,16 +344,21 @@ Graph *graph_read(const char *filename, int load_names) {
 
         cp = &buffer[0];
 
-        @<check if the line contains a context switch@>@;
+        if (is_line_a_context_switcher(cp, &ctx)) {
+            if (ctx==VERTICES)
+                @<create the graph@>@;
+
+            continue;
+        }
 
         if (ctx == ATTRS)
             @<extract the value from key-value pair@>@;
         else if (ctx == VERTICES) {
             if (g->has_names) {
-                @<index the vertex name to its index in the graph@>@;
+                index_vertex_name(g, cp);
             }
         } else if (ctx == ARCS)
-            @<include the arcs in the adjacency list of a vertex@>@;
+            add_arcs(g, cp, lineno);
         else {
             fprintf(stderr, "unknown context %d\n", ctx);
             exit(EXIT_FAILURE);
@@ -319,19 +370,18 @@ Graph *graph_read(const char *filename, int load_names) {
     return g;
 }
 
-@ @<check if the line contains a context switch@>=
-{
-    register int i;
-    for (i=1; i<=ARCS; i++)
-        if(strstr(cp, context_marks[i]) != NULL) {
-            ctx = i;
-    
-            if (ctx==VERTICES)
-                @<create the graph@>@;
+@ Check if the line contains a context switch.
 
-            break;
-        }
+@<static functions@>=
+static int is_line_a_context_switcher(char *ln, int *ctx) {
+    int i;
     
+    for (i=1; i<=ARCS; i++)
+        if(strstr(ln, context_marks[i]) != NULL) {
+            *ctx = i;
+             return 1;
+        }
+    return 0;
 }
 
 @ @<create the graph@>=
@@ -343,9 +393,11 @@ Graph *graph_read(const char *filename, int load_names) {
 @ @<internal data@>=
 static char graph_name[MAXNAME] = "graph"; 
 
-@ @<local data@>=
+@ @<internal data@>=
  /* key and value */
-char name[MAXNAME];
+char name_buf[MAXNAME];
+
+@ @<local data@>=
 long val;
  /* number of vertices */ 
 long nverts;
@@ -354,50 +406,69 @@ long narcs;
 
 @ @<extract the value...@>=
 {
-    sscanf(buffer, "%256[^=]=%ld", name, &val);
-    if (strncmp(name, attr_num_names[VERTICES], MAXNAME)==0) {
+    sscanf(buffer, "%256[^=]=%ld", name_buf, &val);
+    if (strncmp(name_buf, attr_num_names[VERTICES], MAXNAME)==0) {
         nverts = val;
         assert(nverts > 0);
-    } else if (strncmp(name, attr_num_names[ARCS], MAXNAME)==0) {
+    } else if (strncmp(name_buf, attr_num_names[ARCS], MAXNAME)==0) {
         narcs = val;
         assert(narcs > 0);
     } else {
         fprintf(stderr, "found \"%s=%ld\" as attribute at line %d", 
-                name, val, lineno);
+                name_buf, val, lineno);
     }
 }
 
-@ @<index the vertex...@>=
-{    
-    sscanf(buffer, "%ld %s", &val, name);
-    assert(val >= 0);
-    graph_index_name(g, val, name);
+@ @<static functions@>=
+static void index_vertex_name(Graph *g, char *str) {
+    long idx;
+
+    sscanf(str, "%ld %256[^\n]", &idx, name_buf);
+    assert(idx >= 0);
+    graph_index_name(g, idx, &name_buf[0]);
 }
 
-@ @<include the arcs...@>=
-{
-    @<get the vertex index@>@;
-    @<extract the arcs and add to adjacency list@>@;
-}
+@ @<static functions@>=
+void add_arcs(Graph *g, char *ln, long lineno) {
+    int i;
+    long from=-1, to=-1;
 
-@ @<local...@>=
-int i;
-long u, v;
-
-@ @<get the vertex index@>=
-i = 0;
- while (*cp || *cp != ':')
-     name[i++] = *cp++;
- 
- u = atol(name);
-
- @ @<extract the arcs...@>=
- while (*cp || *cp != '\n') {
     i = 0;
-    while (*cp || *cp != ',')
-        name[i++] = *cp++;
+    while (1) {
+        if (!*ln) {
+            @<throw error due wrong arcs list syntax@>@;
+        }
+
+        name_buf[i++] = *ln++;
  
-    v = atol(name);
-    graph_add_arc(g, u, v);
- }
+        if (*ln == ':') {
+            name_buf[i] = '\0';
+            i = 0;
+            from = atol(name_buf);
+            ln++;
+            continue;
+        }
+
+        if (*ln == ',' || *ln == '\n') {
+            if (from == -1) {
+                @<throw error due wrong arcs list syntax@>@;
+            }
+            name_buf[i] = '\0';
+            i = 0;
+            to = atol(name_buf);
+            (void)graph_add_arc(g, from, to);
+            
+            if (*ln == '\n')
+                break;
+        
+            ln++;
+        }
+    }
+}
  
+@ @<throw error due wrong arcs list syntax@>=
+{
+    fprintf(stderr, "FATAL: wrong sysntax at line %ld, ", lineno);
+    fprintf(stderr, "expecting something like \"0:1,2,3\", ");
+    exit(EXIT_FAILURE);
+}
