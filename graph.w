@@ -3,7 +3,8 @@
 
 @* Introduction. {\sc GRAPH} is the core module used 
 in this project. It contains the main data structures 
- to represent a graph. 
+ to represent a graph. The module has the following
+ structure:
 
 @p
 #include <ctype.h>
@@ -38,12 +39,6 @@ functions, input/output and string handling are included
 
 @<macros@>@;
 @<exported types@>@;
-
-extern struct graph *graph_new(char *name, long nvertices,
-                                long narcs, int load_names);
-extern void graph_free(Graph*);
-extern Arc*graph_add_arc(Graph*, long from, long to);
-extern Name*graph_index_name(Graph*, long index, char*name);
 @<exported functions@>@;
 
 #endif
@@ -51,14 +46,13 @@ extern Name*graph_index_name(Graph*, long index, char*name);
 @* Data structures. The basic types of {\sc GRAPH} module
 are \&{Vertex}, \&{Arcs} and \&{Graph}. The data structures 
 adapt to the format of graph representation in the data 
-files (see {\tt input} module for the format description). 
+files (see Input section). 
 
 @ The \&{Vertex} structure has a name to identify it and 
- a array of indices representing the destination of the arcs.
-  The |name| is a pointer to string buffer an address where 
-  the begining of the string representing the name is located.
-  
-# warning write about the same index of vertices and names
+ a adjacency list representing the destination of the arcs.
+  The |name| is a pointer to the element of the array |names| 
+  in the \&{Graph} structure where the array index is equal to
+  the vertex index.
 
 @<exported types@>=
 typedef struct vertex_struct {
@@ -69,9 +63,10 @@ typedef struct vertex_struct {
 } Vertex;
   
 @ During the graph initialization, the number of arcs is known 
-  by the second field of each element in the ``{\tt * arcs}''
-  section. With this information in hand, the exact memory 
-  needed may be allocated.
+  upfront by the assignment of attribute ``{\tt narcs}'' in 
+  the graph data file. With this information in hand, the exact memory 
+  needed may be allocated. It's not so flexible but it allows an
+  improvement in the memory locality of the arcs elements in the array.
 
 @<exported types@>=
 typedef struct arc_struct {
@@ -79,12 +74,12 @@ typedef struct arc_struct {
     struct arc_struct *next; /* linked list of arcs pointers */
 } Arc;
 
-@ A new arc is retrieved from the graph |arcs| field and 
-returned as a pointer. The |Vertex| |v| is set to the new arc
+@ A new arc is retrieved from the |Graph| |arcs| variable and 
+returned as a pointer. The |Vertex| |v| is set to the new |Arc|
 |tip| field. A assertion of capacity to add a new arc is performed.
 
 @<static functions@>=
-static Arc *arc_new(Graph *g, Vertex *v) {
+static Arc *new_arc(Graph *g, Vertex *v) {
     Arc *a;
 
     assert(g->m < g->acap);
@@ -96,10 +91,9 @@ static Arc *arc_new(Graph *g, Vertex *v) {
     return a;
 }
 
-@ To add an arc to vertex with index |from|, its 
-|Vertex| pointer |v| must be retrieved as well the 
-|to| |Vertex| pointer |u|. Then |u| is added in the 
-adjacency list of |v| that is represented by the 
+@ To add an |Arc| to |Vertex| |u| with index |from|, 
+|Vertex| |v| with index |to| is added in the 
+adjacency list of |u| that is represented by the 
 |arcs| field. There is no verification of duplicity 
 of arcs and the arcs' length or weight are not considered.
 
@@ -113,7 +107,7 @@ Arc *graph_add_arc(Graph *g, long from, long to) {
     u = &g->vertices[from];
     v = &g->vertices[to];
 
-    a = arc_new(g, v);
+    a = new_arc(g, v);
     b = u->arcs;
     u->arcs = a;
     a->next = b;
@@ -121,9 +115,12 @@ Arc *graph_add_arc(Graph *g, long from, long to) {
     return a;
 }
 
+@ @<exported functions@>=
+extern Arc*graph_add_arc(Graph*, long from, long to);
+
 @ |Graph| type is composed of array of vertices, array 
 of arcs, array of vertices' names, size information about 
-these array and a Boolean to inform if the names are present. 
+these arrays and a Boolean to inform if the names are present. 
 Sometimes one may wish to create a graph without names to 
 speed up the initialization or simply to load a integer graph, 
 where the vertices has their indices as representation.
@@ -149,6 +146,14 @@ typedef struct graph {
 
 @ @<macros@>=
 #define MAXNAME 256
+
+@ Memory for \&{Graph}s are created and released by 
+|graph_new| and |graph_free| respectively.
+
+@<exported types@>=
+extern struct graph *graph_new(char *name, long nvertices,
+                                long narcs, int load_names);
+extern void graph_free(Graph*);
 
 @ |Graph| type concentrates most of the data needed to 
 store its information. The number of vertices must be
@@ -206,6 +211,9 @@ void graph_free(Graph *g) {
         free(g);
     }
 }
+
+@ @<exported functions@>=
+extern Name*graph_index_name(Graph*, long index, char*name);
 
 @ If the graph field |has_names| is set to true, the 
 vertices' name are copied to |names| array in the graph 
@@ -328,6 +336,7 @@ Graph *graph_read(const char *filename, int load_names) {
     FILE *fp;
     Graph *g;
     int ctx = ATTRS; /* starting context */
+    static char graph_name[MAXNAME];
     @<local data@>@;    
 
     fp = fopen(filename, "r");
@@ -386,12 +395,31 @@ static int is_line_a_context_switcher(char *ln, int *ctx) {
 
 @ @<create the graph@>=
  {
-#warning parse file name to extract graph name     
+     strncpy(name_buf, filename, MAXNAME);
+     extract_graph_name(name_buf, graph_name);
      g = graph_new(graph_name, nverts, narcs, load_names);
  }
 
-@ @<internal data@>=
-static char graph_name[MAXNAME] = "graph"; 
+@ The graph name is extracted from the input file name 
+after leaving only the relative path and striping the
+extension.
+
+@<static functions@>=
+static void extract_graph_name(char *filename, char buffer[]) {        
+    int i=0;
+    char *c;
+
+    c = filename;
+    while (*c != '.' || !*c) {
+        if (*c == '/' || *c == '\\') {
+            i = 0;
+            c++;
+            continue;
+        }
+        buffer[i++] = *c++;
+    }
+    buffer[i] = '\0';
+}
 
 @ @<internal data@>=
  /* key and value */
