@@ -4,51 +4,44 @@ package graphs
 // compiled in 32-bit architecture.
 // https://groups.google.com/g/golang-nuts/c/mtnn-01Dh_I
 
-// TODO: check the number of bytes occupied by int in golang
-type ArcIndex = int
-type VertexIndex = int
-
 type Vertex struct {
 	name string
-	adj  []ArcIndex // Adjacency list of arcs indices
+	arcs *Arc // Head of adjacency list of arcs
 }
 
-func (v *Vertex) Adj() []ArcIndex {
-	return v.adj
-}
-
-func (v *Vertex) AddArc(ai ArcIndex) {
-	v.adj = append(v.adj, ai)
+func (v *Vertex) Arcs() *Arc {
+	return v.arcs
 }
 
 type Arc struct {
-	tip VertexIndex // Vertex index
-	len uint32      // arc length
+	tip  *Vertex // Vertex pointed by this Arc
+	next *Arc    // Next arc in the adjacency list
+	len  uint    // Arc length
 }
 
-func (d *Digraph) NewArc(vi VertexIndex, len uint32) ArcIndex {
-	d.arcs = append(d.arcs, Arc{vi, len})
-	ai := d.m
+func (d *Digraph) NewArc(v *Vertex, length uint) *Arc {
+	var a Arc = Arc{v, nil, length}
+	d.arcs = append(d.arcs, a)
 	d.m++
 
-	return ai
+	return &a
 }
 
-func (a *Arc) Tip() VertexIndex {
+func (a *Arc) Tip() *Vertex {
 	return a.tip
 }
 
-func (a *Arc) Length() uint32 {
+func (a *Arc) Length() uint {
 	return a.len
 }
 
 type Digraph struct {
-	name              string                 // name of the graph
-	vertices          []Vertex               // array of vertices
-	arcs              []Arc                  // array of arcs
-	n                 VertexIndex            // number of vertices
-	m                 ArcIndex               // number of arcs
-	nameToVertexIndex map[string]VertexIndex // names for vertices (optional)
+	name         string             // name of the graph
+	vertices     []Vertex           // array of vertices
+	arcs         []Arc              // array of arcs
+	n            uint               // number of vertices
+	m            uint               // number of arcs
+	nameToVertex map[string]*Vertex // names for vertices (optional)
 }
 
 func NewDigraph(name string) *Digraph {
@@ -58,63 +51,54 @@ func NewDigraph(name string) *Digraph {
 		make([]Arc, 0),
 		0,
 		0,
-		make(map[string]VertexIndex, 0),
+		make(map[string]*Vertex, 0),
 	}
 }
 
-func (d *Digraph) Arc(ai ArcIndex) *Arc {
-	return &d.arcs[ai]
-}
-
-func (d *Digraph) Vertex(vi VertexIndex) *Vertex {
-	return &d.vertices[vi]
-}
-
-func (d *Digraph) Order() VertexIndex {
-	return d.n
-}
-
-func (d *Digraph) Size() ArcIndex {
-	return d.m
-}
-
-func (d *Digraph) VertexIndex(name string) VertexIndex {
-	vi, ok := d.nameToVertexIndex[name]
-	if !ok {
-		v := Vertex{name, nil}
-		d.vertices = append(d.vertices, v)
-		vi = d.n
-		d.n++
+func (d *Digraph) Vertex(name string) *Vertex {
+	if v, ok := d.nameToVertex[name]; ok {
+		return v
 	}
-	return vi
+
+	v := &d.vertices[d.n]
+	v.name = name
+	v.arcs = nil
+	d.nameToVertex[name] = v
+
+	return v
 }
 
 func (d *Digraph) Vertices() []Vertex {
 	return d.vertices
 }
 
-func (d *Digraph) AddArc(vi, wi VertexIndex, len uint32) {
-	// TODO validate indices vi and wi
-	v := &d.vertices[vi]
-
-	ai := d.NewArc(wi, len)
-	v.AddArc(ai)
+func (d *Digraph) Order() uint {
+	return d.n
 }
 
-func (d *Digraph) AddArcByName(from, to string, len uint32) {
-	vi := d.VertexIndex(from)
-	wi := d.VertexIndex(from)
+func (d *Digraph) Size() uint {
+	return d.m
+}
 
-	d.AddArc(vi, wi, len)
+func (d *Digraph) AddArc(from, to string, length uint) {
+	var a, b *Arc
+	var v, w *Vertex
+
+	v = d.Vertex(from)
+	w = d.Vertex(to)
+	a = d.NewArc(w, length)
+
+	b = v.arcs
+	v.arcs = a
+	a.next = b
 }
 
 func Reverse(d *Digraph) {
 	rev := NewDigraph(d.name)
-	for vi, v := range d.Vertices() {
-		for ai := range v.Adj() {
-			a := d.Arc(ai)
-			wi := a.Tip()
-			rev.AddArc(wi, vi, a.Length())
+	for _, v := range d.Vertices() {
+		for a := v.arcs; a != nil; a = a.next {
+			w := a.Tip()
+			rev.AddArc(w.name, v.name, a.len)
 		}
 	}
 }
@@ -127,18 +111,11 @@ func NewGraph(name string) *Graph {
 	return &Graph{NewDigraph(name)}
 }
 
-func (g *Graph) AddEdge(from, to int, len uint32) {
+func (g *Graph) AddEdge(from, to string, len uint) {
 	g.AddArc(from, to, len)
 	if from != to { // avoid duplication on self-loops
 		g.AddArc(to, from, len)
 		// discount double direction to emulate an edge
 		g.m--
 	}
-}
-
-func (g *Graph) AddEdgeByName(from, to string, len uint32) {
-	vi := g.VertexIndex(from)
-	wi := g.VertexIndex(from)
-
-	g.AddEdge(vi, wi, len)
 }
