@@ -4,9 +4,11 @@ package graphs
 // compiled in 32-bit architecture.
 // https://groups.google.com/g/golang-nuts/c/mtnn-01Dh_I
 
+var defaultGraphName = "graph"
+
 type Vertex struct {
-	name string
-	arcs *Arc // Head of adjacency list of arcs
+	name string // string to identify the vertex
+	arcs *Arc   // Head of adjacency list of arcs
 }
 
 func (v *Vertex) Arcs() *Arc {
@@ -16,15 +18,11 @@ func (v *Vertex) Arcs() *Arc {
 type Arc struct {
 	tip  *Vertex // Vertex pointed by this Arc
 	next *Arc    // Next arc in the adjacency list
-	len  uint    // Arc length
+	len  int     // Arc length
 }
 
 func (d *Digraph) NewArc(v *Vertex, length uint) *Arc {
-	var a Arc = Arc{v, nil, length}
-	d.arcs = append(d.arcs, a)
-	d.m++
-
-	return &a
+	return &Arc{v, nil, length}
 }
 
 func (a *Arc) Tip() *Vertex {
@@ -38,20 +36,18 @@ func (a *Arc) Length() uint {
 type Digraph struct {
 	name         string             // name of the graph
 	vertices     []Vertex           // array of vertices
-	arcs         []Arc              // array of arcs
-	n            uint               // number of vertices
-	m            uint               // number of arcs
+	n            int                // number of vertices
+	m            int                // number of arcs
 	nameToVertex map[string]*Vertex // names for vertices (optional)
 }
 
-func NewDigraph(name string) *Digraph {
+func NewDigraph(nvertices int) *Digraph {
 	return &Digraph{
-		name,
-		make([]Vertex, 0),
-		make([]Arc, 0),
-		0,
-		0,
-		make(map[string]*Vertex, 0),
+		name:         defaultGraphName,
+		vertices:     make([]Vertex, nvertices),
+		n:            0,
+		m:            0,
+		nameToVertex: make(map[string]*Vertex, 0),
 	}
 }
 
@@ -72,15 +68,15 @@ func (d *Digraph) Vertices() []Vertex {
 	return d.vertices
 }
 
-func (d *Digraph) Order() uint {
+func (d *Digraph) Order() int {
 	return d.n
 }
 
-func (d *Digraph) Size() uint {
+func (d *Digraph) Size() int {
 	return d.m
 }
 
-func (d *Digraph) AddArc(from, to string, length uint) {
+func (d *Digraph) AddArc(from, to string, length int) {
 	var a, b *Arc
 	var v, w *Vertex
 
