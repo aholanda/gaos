@@ -22,7 +22,7 @@ const (
 	arcsSection     = 2
 
 	// Prefix used for arcs and vertices
-	arcLabelPrefix = "A"
+	arcLabelPrefix    = "A"
 	vertexLabelPrefix = "V"
 
 	// File name extension
@@ -32,7 +32,7 @@ const (
 	nilUtilTypes = "ZZZZZZZZZZZZZZ"
 
 	// Field separator
-	var fieldSep string = ","
+	fieldSep string = ","
 )
 
 func check(err error) {
@@ -41,16 +41,22 @@ func check(err error) {
 	}
 }
 
-func lookupArc(label string, arcs *[]Arc) *Arc {
+func quote(name string) string {
+	return "\"" + name + "\""
+}
+
+func lookupArc(label string, arcs []g.Arc) *g.Arc {
 	if label == "0" {
 		return nil
 	}
-	i := strconv.Atoi(strings.TrimPrefix("A", label))
+	i, err := strconv.Atoi(strings.TrimPrefix("A", label))
+	check(err)
 	return &arcs[i]
 }
 
-func lookupArc(label string, verts *[]Vertex) *Vertex {
-	i := strconv.Atoi(strings.TrimPrefix("V", label))
+func lookupVertex(label string, verts []g.Vertex) *g.Vertex {
+	i, err := strconv.Atoi(strings.TrimPrefix("V", label))
+	check(err)
 	return &verts[i]
 }
 
@@ -58,7 +64,7 @@ func ReadGB(filepath string) *g.Graph {
 	// Line number and counters for vertices and arcs
 	var lineno, nV, nA = 0, 0, 0
 	// number of vertices and arcs
-	var n, m uint = 0, 0
+	var n, m int = 0, 0
 	// mark the attributes used in the graph
 	var utilTypes string
 	// current line in the buffer
@@ -66,15 +72,13 @@ func ReadGB(filepath string) *g.Graph {
 	// current context
 	var curSection int = 0 // Graph description starts at comments.
 	// Graph to be returned
-	var graph g.Graph
+	var graph *g.Graph
 	// array of arcs to feed the adjacency list
 	var arcs []g.Arc
 
 	file, err := os.Open(filepath)
 	check(err)
 	defer file.Close()
-
-	graph := g.NewGraph("graph")
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -87,10 +91,11 @@ func ReadGB(filepath string) *g.Graph {
 				&utilTypes, &n, &m)
 
 			if n == 0 || m == 0 {
-				log.Fatalf("wrong number of vertices or arcs at line\n", lineno)
+				log.Fatalf("wrong number of vertices or arcs at line %d\n",
+					lineno)
 			}
 			graph = g.NewGraph(n)
-			arcs = make([]Arc, m)
+			arcs = make([]g.Arc, m)
 
 			continue
 		}
@@ -108,8 +113,8 @@ func ReadGB(filepath string) *g.Graph {
 		if curSection == verticesSection {
 			fields := strings.Split(line, ",")
 			v := graph.Vertices[nV]
-			v.name = fields[0]
-			v.arcs = lookupArc(fields[1], &arcs)
+			v.Name = fields[0]
+			v.Arcs = lookupArc(fields[1], arcs)
 
 			nV++
 		} else if curSection == arcsSection {
@@ -118,9 +123,10 @@ func ReadGB(filepath string) *g.Graph {
 			// V0,  A2,      3,      V1
 			fields := strings.Split(line, ",")
 			a := &arcs[nA]
-			a.tip = lookupVertex(fields[0], &graph.Vertices)
-			a.next = lookupArc(fields[1], &arcs)
-			a.len = strconv.Atoi(fields[2])
+			a.Tip = lookupVertex(fields[0], graph.Vertices)
+			a.Next = lookupArc(fields[1], arcs)
+			a.Len, err = strconv.Atoi(fields[2])
+			check(err)
 
 			nA++
 		} else {
@@ -130,10 +136,10 @@ func ReadGB(filepath string) *g.Graph {
 
 	check(scanner.Err())
 
-	return &graph
+	return graph
 }
 
-func WriteGB(graph g.Graph) {
+func WriteGB(graph *g.Graph) {
 	// number of vertices
 	var n int = graph.Order()
 	// number of arcs
@@ -141,23 +147,23 @@ func WriteGB(graph g.Graph) {
 	// counter for the arcs indices
 	var mm int = 0
 	// Output file name
-	var filename string = graph.name + fileNameExtension
+	var filename string = graph.Name + fileNameExtension
 	// Map vertex pointer and its index
-	var vertexToIndex map[*Vertex]int = make(map[*Vertex], n)
+	var vertexToIndex map[*g.Vertex]int = make(map[*g.Vertex]int, n)
 	// Index arc pointer
-	var arcs []*Arc = make([]*Arc, m)
+	var arcs []*g.Arc = make([]*g.Arc, m)
 	// Map arc pointer and its index
-	var arcToIndex map[*Arc]int = make(map[*Arc], m)	
+	var arcToIndex map[*g.Arc]int = make(map[*g.Arc]int, m)
 	// arc label
 	var arcLabel string = arcLabelPrefix
 
 	file, err := os.Create(filename)
 	check(err)
 
-	defer f.Close()
+	defer file.Close()
 
 	firstline := fmt.Sprintf("%s (util_types %s,%dV,%dA)",
-		graphMark, nilUtilTypes, graph.Order(), graph.Size)
+		graphMark, nilUtilTypes, graph.Order(), graph.Size())
 	_, err = file.WriteString(firstline)
 	check(err)
 
@@ -166,20 +172,24 @@ func WriteGB(graph g.Graph) {
 	check(err)
 
 	// list the vertices and their attributes
-	for i := 0; i<n; i++ {
+	for i := 0; i < n; i++ {
 		v := &graph.Vertices[i]
 
 		vertexToIndex[v] = i
 
-		line := v.name + fieldSep
-		if (v.arcs == nil) {
+		line := quote(v.Name) + fieldSep
+		if v.Arcs == nil {
 			arcLabel = "0"
 		} else {
-			arcs[mm] = v.arcs
-			arcLabel = arcLabelPrefix + strconv.Itoa(mm); mm++
+			arcs[mm] = v.Arcs
+			arcToIndex[v.Arcs] = mm
+			arcLabel = arcLabelPrefix + strconv.Itoa(mm)
+			mm++
 			// Capture the rest os arcs in the adjacency list
-			for a := v.arcs.Next(); a != nil; a = a.Next() {
-				arcs[mm] = a; arcToIndex[a] = mm; mm++
+			for a := v.Arcs.Next; a != nil; a = a.Next {
+				arcs[mm] = a
+				arcToIndex[a] = mm
+				mm++
 			}
 		}
 		line += arcLabel
@@ -193,16 +203,18 @@ func WriteGB(graph g.Graph) {
 
 	// List the arcs and their attributes;
 	// each line nA corresponds to the arc index.
-	for i:=0; i<mm; i++ {
-		a := arcs[mm]
-		vi := strconv.Itoa(vertexToIndex[a.tip])
+	for i := 0; i < mm; i++ {
+		a := arcs[i]
+		vi := strconv.Itoa(vertexToIndex[a.Tip])
 		// next arc index
-		nextAi = strconv.Itoa(arcToIndex[a.next])
+		nextAi := "0"
+		if a.Next != nil {
+			nextAi = "A" + strconv.Itoa(arcToIndex[a.Next])
+		}
+		line := "V" + vi + fieldSep + nextAi +
+			fieldSep + strconv.Itoa(a.Len)
 
-		line = "V" + vi + + fieldSep + "A" + nextAi +
-		 fieldSep + strconv.Itoa(a.len)
-
-		 _, err = file.WriteString(line + "\n")
-		 check(err)
-	 }
+		_, err = file.WriteString(line + "\n")
+		check(err)
+	}
 }
