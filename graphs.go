@@ -7,73 +7,62 @@ package graphs
 var defaultGraphName = "graph"
 
 type Vertex struct {
-	name string // string to identify the vertex
-	arcs *Arc   // Head of adjacency list of arcs
-}
-
-func (v *Vertex) Arcs() *Arc {
-	return v.arcs
+	Name string // string to identify the vertex
+	Arcs *Arc   // Head of adjacency list of arcs
 }
 
 type Arc struct {
-	tip  *Vertex // Vertex pointed by this Arc
-	next *Arc    // Next arc in the adjacency list
-	len  int     // Arc length
+	Tip  *Vertex // Vertex pointed by this Arc
+	Next *Arc    // Next arc in the adjacency list
+	Len  int     // Arc length
 }
 
 func (d *Digraph) NewArc(v *Vertex, length int) *Arc {
 	return &Arc{v, nil, length}
 }
 
-func (a *Arc) Tip() *Vertex {
-	return a.tip
-}
-
 func (a *Arc) Length() int {
-	return a.len
+	return a.Len
 }
 
 type Digraph struct {
-	name         string             // name of the graph
-	vertices     []Vertex           // array of vertices
-	n            int                // number of vertices
-	m            int                // number of arcs
-	nameToVertex map[string]*Vertex // names for vertices (optional)
+	Name         string             // name of the graph
+	Vertices     []Vertex           // array of vertices
+	N            int                // number of vertices
+	M            int                // number of arcs
+	NameToVertex map[string]*Vertex // names for vertices (optional)
 }
 
 func NewDigraph(nvertices int) *Digraph {
 	return &Digraph{
-		name:         defaultGraphName,
-		vertices:     make([]Vertex, nvertices),
-		n:            0,
-		m:            0,
-		nameToVertex: make(map[string]*Vertex, 0),
+		Name:         defaultGraphName,
+		Vertices:     make([]Vertex, nvertices),
+		N:            0,
+		M:            0,
+		NameToVertex: make(map[string]*Vertex, 0),
 	}
 }
 
 func (d *Digraph) Vertex(name string) *Vertex {
-	if v, ok := d.nameToVertex[name]; ok {
+	if v, ok := d.NameToVertex[name]; ok {
 		return v
 	}
 
-	v := &d.vertices[d.n]
-	v.name = name
-	v.arcs = nil
-	d.nameToVertex[name] = v
+	v := &d.Vertices[d.N]
+	d.N++
+	v.Name = name
+	v.Arcs = nil
+	d.NameToVertex[name] = v
 
 	return v
 }
 
-func (d *Digraph) Vertices() []Vertex {
-	return d.vertices
-}
-
 func (d *Digraph) Order() int {
-	return d.n
+	return d.N
 }
 
 func (d *Digraph) Size() int {
-	return d.m
+	return d.M
 }
 
 func (d *Digraph) AddArc(from, to string, length int) {
@@ -84,18 +73,20 @@ func (d *Digraph) AddArc(from, to string, length int) {
 	w = d.Vertex(to)
 	a = d.NewArc(w, length)
 
-	b = v.arcs
-	v.arcs = a
-	a.next = b
+	b = v.Arcs
+	v.Arcs = a
+	a.Next = b
+
+	d.M++
 }
 
 func Reverse(d *Digraph) {
-	rev := NewDigraph(d.n)
-	rev.name = d.name + "Reversed"
-	for _, v := range d.Vertices() {
-		for a := v.arcs; a != nil; a = a.next {
-			w := a.Tip()
-			rev.AddArc(w.name, v.name, a.len)
+	rev := NewDigraph(d.N)
+	rev.Name = d.Name + "Reversed"
+	for _, v := range d.Vertices {
+		for a := v.Arcs; a != nil; a = a.Next {
+			w := a.Tip
+			rev.AddArc(w.Name, v.Name, a.Len)
 		}
 	}
 }
@@ -113,6 +104,6 @@ func (g *Graph) AddEdge(from, to string, len int) {
 	if from != to { // avoid duplication on self-loops
 		g.AddArc(to, from, len)
 		// discount double direction to emulate an edge
-		g.m--
+		g.M--
 	}
 }
