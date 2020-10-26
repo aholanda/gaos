@@ -21,7 +21,7 @@ type Arc struct {
 	len  int     // Arc length
 }
 
-func (d *Digraph) NewArc(v *Vertex, length uint) *Arc {
+func (d *Digraph) NewArc(v *Vertex, length int) *Arc {
 	return &Arc{v, nil, length}
 }
 
@@ -29,7 +29,7 @@ func (a *Arc) Tip() *Vertex {
 	return a.tip
 }
 
-func (a *Arc) Length() uint {
+func (a *Arc) Length() int {
 	return a.len
 }
 
@@ -90,7 +90,8 @@ func (d *Digraph) AddArc(from, to string, length int) {
 }
 
 func Reverse(d *Digraph) {
-	rev := NewDigraph(d.name)
+	rev := NewDigraph(d.n)
+	rev.name = d.name + "Reversed"
 	for _, v := range d.Vertices() {
 		for a := v.arcs; a != nil; a = a.next {
 			w := a.Tip()
@@ -103,11 +104,11 @@ type Graph struct {
 	*Digraph
 }
 
-func NewGraph(name string) *Graph {
-	return &Graph{NewDigraph(name)}
+func NewGraph(nvertices int) *Graph {
+	return &Graph{NewDigraph(nvertices)}
 }
 
-func (g *Graph) AddEdge(from, to string, len uint) {
+func (g *Graph) AddEdge(from, to string, len int) {
 	g.AddArc(from, to, len)
 	if from != to { // avoid duplication on self-loops
 		g.AddArc(to, from, len)
