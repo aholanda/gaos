@@ -43,7 +43,7 @@ func NewDigraph(nvertices int) *Digraph {
 	}
 }
 
-func (d *Digraph) Vertex(name string) *Vertex {
+func (d *Digraph) NewVertex(name string) *Vertex {
 	if v, ok := d.NameToVertex[name]; ok {
 		return v
 	}
@@ -69,8 +69,8 @@ func (d *Digraph) AddArc(from, to string, length int) {
 	var a, b *Arc
 	var v, w *Vertex
 
-	v = d.Vertex(from)
-	w = d.Vertex(to)
+	v = d.NewVertex(from)
+	w = d.NewVertex(to)
 	a = d.NewArc(w, length)
 
 	b = v.Arcs
