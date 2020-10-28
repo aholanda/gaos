@@ -60,7 +60,7 @@ func lookupVertex(label string, verts []g.Vertex) *g.Vertex {
 	return &verts[i]
 }
 
-func ReadGB(filepath string) *g.Graph {
+func ReadGB(filepath string) *g.Digraph {
 	// Line number and counters for vertices and arcs
 	var lineno, nV, nA = 0, 0, 0
 	// number of vertices and arcs
@@ -139,7 +139,8 @@ func ReadGB(filepath string) *g.Graph {
 	return graph
 }
 
-func WriteGB(graph *g.Graph) {
+// TODO: generalize argument for writegb
+func WriteGB(graph *g.Digraph) {
 	// number of vertices
 	var n int = graph.Order()
 	// number of arcs
