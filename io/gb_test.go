@@ -7,7 +7,7 @@ import (
 )
 
 func TestSum(t *testing.T) {
-	graph := g.NewGraph(3)
+	graph := g.NewDigraph(3)
 	graph.AddArc("look", "feel", 1)
 
 	if graph.N != 2 {
