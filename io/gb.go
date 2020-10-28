@@ -45,6 +45,11 @@ func quote(name string) string {
 	return "\"" + name + "\""
 }
 
+func unquote(name string) string {
+	name = strings.TrimPrefix(name, "\"")
+	return strings.TrimSuffix(name, "\"")
+}
+
 func removePrefix(str, prefix string) string {
 	newStr := strings.TrimPrefix(str, prefix)
 
@@ -123,8 +128,8 @@ func ReadGB(filepath string) *g.Digraph {
 
 		if curSection == verticesSection {
 			fields := strings.Split(line, ",")
-			v := graph.Vertices[nV]
-			v.Name = fields[0]
+			v := &graph.Vertices[nV]
+			v.Name = unquote(fields[0])
 			v.Arcs, err = lookupArc(fields[1], arcs)
 			check(err, filepath, lineno)
 
