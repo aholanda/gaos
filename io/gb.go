@@ -72,7 +72,7 @@ func ReadGB(filepath string) *g.Digraph {
 	// current context
 	var curSection int = 0 // Graph description starts at comments.
 	// Graph to be returned
-	var graph *g.Graph
+	var graph *g.Digraph
 	// array of arcs to feed the adjacency list
 	var arcs []g.Arc
 
@@ -94,7 +94,7 @@ func ReadGB(filepath string) *g.Digraph {
 				log.Fatalf("wrong number of vertices or arcs at line %d\n",
 					lineno)
 			}
-			graph = g.NewGraph(n)
+			graph = g.NewDigraph(n)
 			arcs = make([]g.Arc, m)
 
 			continue
