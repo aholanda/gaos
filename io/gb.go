@@ -45,8 +45,8 @@ func quote(name string) string {
 	return "\"" + name + "\""
 }
 
-func removePrefix(prefix, str string) string {
-	newStr := strings.TrimPrefix(prefix, str)
+func removePrefix(str, prefix string) string {
+	newStr := strings.TrimPrefix(str, prefix)
 
 	return newStr
 }
@@ -55,13 +55,13 @@ func lookupArc(label string, arcs []g.Arc) (*g.Arc, error) {
 	if label == "0" {
 		return nil, nil
 	}
-	i, err := strconv.Atoi(removePrefix("A", label))
+	i, err := strconv.Atoi(removePrefix(label, "A"))
 
 	return &arcs[i], err
 }
 
 func lookupVertex(label string, verts []g.Vertex) (*g.Vertex, error) {
-	i, err := strconv.Atoi(removePrefix("V", label))
+	i, err := strconv.Atoi(removePrefix(label, "V"))
 	return &verts[i], err
 }
 
