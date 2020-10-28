@@ -87,19 +87,19 @@ func ReadGB(filepath string) *g.Digraph {
 
 		if strings.HasPrefix(line, graphMark) {
 			curSection = graphSection
-			fmt.Sscanf(line, graphMark + " (util_types %14s,%dV,%dA)",
+			fmt.Sscanf(line, graphMark+" (util_types %14s,%dV,%dA)",
 				&utilTypes, &n, &m)
 
 			if n < 1 {
-				log.Fatalf("wrong number of vertices=%d at line %d\n", n
-					lineno)
+				log.Fatalf("wrong number of vertices=%d at line %d\n",
+					n, lineno)
 			}
-			
+
 			if m < 1 {
-				log.Fatalf("wrong number of arcs=%d at line %d\n", m
-					lineno)
+				log.Fatalf("wrong number of arcs=%d at line %d\n",
+					m, lineno)
 			}
-			
+
 			graph = g.NewDigraph(n)
 			arcs = make([]g.Arc, m)
 
