@@ -163,7 +163,7 @@ func WriteGB(graph *g.Digraph) {
 
 	defer file.Close()
 
-	firstline := fmt.Sprintf("%s (util_types %s,%dV,%dA)",
+	firstline := fmt.Sprintf("%s (util_types %s,%dV,%dA)\n",
 		graphMark, nilUtilTypes, graph.Order(), graph.Size())
 	_, err = file.WriteString(firstline)
 	check(err)
