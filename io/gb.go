@@ -35,9 +35,9 @@ const (
 	fieldSep string = ","
 )
 
-func check(err error) {
+func check(err error, filename string, lineno int) {
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("%v at %s:%d\n", err, filename, lineno)
 	}
 }
 
@@ -45,19 +45,24 @@ func quote(name string) string {
 	return "\"" + name + "\""
 }
 
-func lookupArc(label string, arcs []g.Arc) *g.Arc {
-	if label == "0" {
-		return nil
-	}
-	i, err := strconv.Atoi(strings.TrimPrefix("A", label))
-	check(err)
-	return &arcs[i]
+func removePrefix(prefix, str string) string {
+	newStr := strings.TrimPrefix(prefix, str)
+
+	return newStr
 }
 
-func lookupVertex(label string, verts []g.Vertex) *g.Vertex {
-	i, err := strconv.Atoi(strings.TrimPrefix("V", label))
-	check(err)
-	return &verts[i]
+func lookupArc(label string, arcs []g.Arc) (*g.Arc, error) {
+	if label == "0" {
+		return nil, nil
+	}
+	i, err := strconv.Atoi(removePrefix("A", label))
+
+	return &arcs[i], err
+}
+
+func lookupVertex(label string, verts []g.Vertex) (*g.Vertex, error) {
+	i, err := strconv.Atoi(removePrefix("V", label))
+	return &verts[i], err
 }
 
 func ReadGB(filepath string) *g.Digraph {
@@ -77,7 +82,7 @@ func ReadGB(filepath string) *g.Digraph {
 	var arcs []g.Arc
 
 	file, err := os.Open(filepath)
-	check(err)
+	check(err, filepath, -1)
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
@@ -120,7 +125,8 @@ func ReadGB(filepath string) *g.Digraph {
 			fields := strings.Split(line, ",")
 			v := graph.Vertices[nV]
 			v.Name = fields[0]
-			v.Arcs = lookupArc(fields[1], arcs)
+			v.Arcs, err = lookupArc(fields[1], arcs)
+			check(err, filepath, lineno)
 
 			nV++
 		} else if curSection == arcsSection {
@@ -129,10 +135,12 @@ func ReadGB(filepath string) *g.Digraph {
 			// V0,  A2,      3,      V1
 			fields := strings.Split(line, ",")
 			a := &arcs[nA]
-			a.Tip = lookupVertex(fields[0], graph.Vertices)
-			a.Next = lookupArc(fields[1], arcs)
+			a.Tip, err = lookupVertex(fields[0], graph.Vertices)
+			check(err, filepath, lineno)
+			a.Next, err = lookupArc(fields[1], arcs)
+			check(err, filepath, lineno)
 			a.Len, err = strconv.Atoi(fields[2])
-			check(err)
+			check(err, filepath, lineno)
 
 			nA++
 		} else {
@@ -140,7 +148,7 @@ func ReadGB(filepath string) *g.Digraph {
 		}
 	}
 
-	check(scanner.Err())
+	check(scanner.Err(), filepath, lineno)
 
 	return graph
 }
@@ -153,6 +161,8 @@ func WriteGB(graph *g.Digraph) {
 	var m int = graph.Size()
 	// counter for the arcs indices
 	var mm int = 0
+	// Line number
+	var lineno int = 0
 	// Output file name
 	var filename string = graph.Name + fileNameExtension
 	// Map vertex pointer and its index
@@ -165,18 +175,20 @@ func WriteGB(graph *g.Digraph) {
 	var arcLabel string = arcLabelPrefix
 
 	file, err := os.Create(filename)
-	check(err)
+	check(err, filename, -1)
 
 	defer file.Close()
 
 	firstline := fmt.Sprintf("%s (util_types %s,%dV,%dA)\n",
 		graphMark, nilUtilTypes, graph.Order(), graph.Size())
 	_, err = file.WriteString(firstline)
-	check(err)
+	lineno++
+	check(err, filename, lineno)
 
 	// Mark the begin of "* Vertices" section
 	_, err = file.WriteString(verticesMark + "\n")
-	check(err)
+	lineno++
+	check(err, filename, lineno)
 
 	// list the vertices and their attributes
 	for i := 0; i < n; i++ {
@@ -201,12 +213,14 @@ func WriteGB(graph *g.Digraph) {
 		}
 		line += arcLabel
 		_, err = file.WriteString(line + "\n")
-		check(err)
+		lineno++
+		check(err, filename, lineno)
 	}
 
 	// Mark the begin of "* Arcs" section
 	_, err = file.WriteString(arcsMark + "\n")
-	check(err)
+	lineno++
+	check(err, filename, lineno)
 
 	// List the arcs and their attributes;
 	// each line nA corresponds to the arc index.
@@ -222,6 +236,7 @@ func WriteGB(graph *g.Digraph) {
 			fieldSep + strconv.Itoa(a.Len)
 
 		_, err = file.WriteString(line + "\n")
-		check(err)
+		lineno++
+		check(err, filename, lineno)
 	}
 }
