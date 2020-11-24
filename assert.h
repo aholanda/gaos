@@ -12,7 +12,6 @@
 extern void assert(int e);
 #define assert(e) ((void)((e)||\
     (fprintf(stderr, "%s:%d: Assertion failed: %s\n", \
-    __FILE__, (int)__LINE__, #e), abort(), 0)))
-#endif
-
-#endif
+    __FILE__, (int)__LINE__, #e), exit(EXIT_FAILURE), 0)))
+#endif // NDEBUG
+#endif // LIBGRAPHS_ASSERT_H
