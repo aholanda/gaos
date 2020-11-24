@@ -27,6 +27,6 @@ extern void *hashmap_get(HashMap *map, const void *key);
 extern void *hashmap_put(HashMap *map, const void *key, void *value);
 extern void *hashmap_remove(HashMap *map, const void *key);
 extern int hashmap_length(HashMap *map);
-extern void hashmap_free(HashMap *map);
+extern void hashmap_free(HashMap **map);
 
 #endif
