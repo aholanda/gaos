@@ -11,3 +11,6 @@ __pycache__
 
 # C
 *.o
+## used only for tests
+main
+main.c
