@@ -1,14 +1,3 @@
-# TODO: remove next 2 lines when project is finished
-*.dat
-*.md5
-
-# local files
-refs
-
-# Python by-products
-__pycache__
-*.pyc
-
 # C
 *.o
 ## used only for tests
