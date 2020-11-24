@@ -1,6 +1,7 @@
 #include <limits.h>
 
 #include "assert.h"
+#include "mem.h"
 #include "hashmap.h"
 
 /* default function to compare keys */
