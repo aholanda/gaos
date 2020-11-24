@@ -11,14 +11,3 @@ __pycache__
 
 # C
 *.o
-
-# CWEB
-*.c
-*.h
-*.idx
-*.log
-*.pdf
-*.scn
-*.tex
-*.toc
-*.ttp
