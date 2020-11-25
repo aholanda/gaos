@@ -6,11 +6,11 @@
 #define ALLOC(nbytes) \
     mem_alloc((nbytes), __FILE__, __LINE__)
 #define CALLOC(count, nbytes) \
-    mem_alloc((count), (nbytes), __FILE__, __LINE__)
+    mem_calloc((count), (nbytes), __FILE__, __LINE__)
 #define FREE(ptr) \
-    mem_alloc((ptr), __FILE__, __LINE__)
+    mem_free((ptr), __FILE__, __LINE__)
 #define RESIZE(ptr, nbytes) \
-    mem_alloc((ptr), (nbytes), __FILE__, __LINE__)
+    mem_resize((ptr), (nbytes), __FILE__, __LINE__)
 /* Aliases to allocate and initialize a variable */
 #define NEW(p) ((p) = ALLOC((long)sizeof *(p)))
 /* Initialize and zeroed the variables */

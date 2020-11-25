@@ -1,6 +1,9 @@
 CFLAGS := -Wall -g
 
+LIB_OBJS += array.o
+LIB_OBJS += atom.o
 LIB_OBJS += hashmap.o
+LIB_OBJS += graph.o
 LIB_OBJS += mem.o
 
 main: main.c $(LIB_OBJS)
@@ -9,5 +12,5 @@ main: main.c $(LIB_OBJS)
 main.c: assert.h mem.h
 
 clean:
-	$(RM) main
+	$(RM) main $(LIB_OBJS)
 

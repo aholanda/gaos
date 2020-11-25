@@ -39,15 +39,15 @@ HashMap *hashmap_new(int hint,
     return map;
 }
 
-static int index(HashMap *map, const void *key) {
-    return (*map->hash)(key)%map->size;
+static int __index(HashMap *map, const void *key) {
+    return (int)(*map->hash)(key)%map->size;
 }
 
 static struct binding *search_key(HashMap *map, const void *key) {
     int i;
     struct binding *p;
 
-    i = index(map, key);
+    i = __index(map, key);
     for (p = map->buckets[i]; p; p = p->link)
         if ((*map->cmp)(key, p->key) == 0)
             return p;
@@ -76,7 +76,7 @@ void *hashmap_put(HashMap *map, const void *key, void *value) {
 
     p = search_key(map, key);
     if (p == NULL) {
-        i = index(map, key);
+        i = __index(map, key);
         NEW(p);
         p->key = key;
         p->value = value;
@@ -99,7 +99,7 @@ void *hashmap_remove(HashMap *map, const void *key) {
     assert(key);
     map->timestamp++;
 
-    i = index(map, key);
+    i = __index(map, key);
     for (pp = &map->buckets[i]; *pp; pp = &(*pp)->link)
         if ((*map->cmp)(key, (*pp)->key) == 0) {
             struct binding *p = *pp;
