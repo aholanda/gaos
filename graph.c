@@ -19,19 +19,18 @@ Graph *graph_new(long nvertices) {
 }
 
 static Vertex *lookup_vertex(Graph *g, char *name) {
-    Vertex *v;
+    Vertex v, *vp;
     char *key;
 
     key = atom_string(name);
-    v = (Vertex *)hashmap_get(g->str2v, key);
-    if (v == NULL) {
-        NEW(v);
-        v->name = key;
-        v->arcs = NULL;
-        v = array_put(g->vertices, g->n++, v);
-        hashmap_put(g->str2v, key, v);
+    vp = (Vertex *)hashmap_get(g->str2v, key);
+    if (vp == NULL) {
+        v.name = key;
+        v.arcs = NULL;
+        vp = array_put(g->vertices, g->n++, &v);
+        hashmap_put(g->str2v, key, vp);
     }
-    return v;
+    return vp;
 }
 
 void graph_add_arc (Graph *g, char *from, char *to, int len) {
@@ -80,5 +79,6 @@ void graph_free(Graph *g) {
     }
     array_free(&g->vertices);
     hashmap_free(&g->str2v);
+    atom_free();
     FREE(g);
 }

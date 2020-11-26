@@ -1,3 +1,4 @@
+CC := clang
 CFLAGS := -Wall -g
 
 LIB_OBJS += array.o

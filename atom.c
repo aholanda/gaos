@@ -11,12 +11,14 @@
 */
 
 #define NELEMS(x) ((sizeof (x))/(sizeof ((x)[0])))
+#define BUCKET_LEN 4096
+
 
 static struct atom {
     struct atom *link;
     int len;
     char *str;
-} *buckets[2048];
+} *buckets[BUCKET_LEN];
 
 static unsigned long scatter[] = {
 2078917053, 143302914, 1027100827, 1953210302, 755253631, 2002600785,
@@ -81,6 +83,7 @@ static struct atom *alloc_new_entry(struct atom *buckets[],
     struct atom *p;
 
     p = ALLOC(sizeof (*p) + len + 1);
+    p->len = len;
     p->str = (char *)(p + 1);
     if (len > 0)
         memcpy(p->str, str, len);
@@ -115,4 +118,15 @@ char *atom_new(char *str, int len) {
 char *atom_string(char *str) {
     assert(str);
     return atom_new(str, strlen(str));
+}
+
+void atom_free() {
+    struct atom *p, *q;
+    int i;
+
+    for (i = 0; i < BUCKET_LEN; i++)   
+        for (p = buckets[i]; p; p = q) {
+            q = p->link;
+            FREE(p);
+        }
 }

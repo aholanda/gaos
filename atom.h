@@ -3,5 +3,6 @@
 
 extern char *atom_new(char *str, int len);
 extern char *atom_string(char *str);
+extern void atom_free();
 
 #endif

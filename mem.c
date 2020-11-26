@@ -14,7 +14,7 @@ void *mem_alloc(long nbytes, const char *file, int line) {
 
     assert(nbytes > 0);
 
-    ptr = malloc(nbytes);
+    ptr = calloc(1, nbytes);
     if (ptr == NULL)
         mem_exit(file, line);
 
