@@ -4,6 +4,14 @@
 #include "array.h"
 #include "hashmap.h"
 
+#define FOREACH_VERTEX(v, g) \
+    long i; \
+    for (i = 0; i < (g)->n && (((v)=array_get(g->vertices, i)) != NULL); i++)
+
+#define FOREACH_ARC(a, v) \
+    for (a = v->arcs; a; a = a->next)
+
+
 typedef struct arc_struct {
     struct vertex_struct *tip;
     struct arc_struct *next;

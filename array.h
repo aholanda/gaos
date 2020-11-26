@@ -10,6 +10,7 @@ typedef struct array_struct {
 extern Array *array_new(long length, int size);
 extern void *array_get(Array *array, long i);
 extern void *array_put(Array *array, long i, void *elem);
+extern long array_length(Array *array);
 extern void array_free(Array **array);
 
 #endif
