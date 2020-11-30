@@ -1,6 +1,10 @@
 #ifndef LIBGRAPHS_GRAPH_H
 #define LIBGRAPHS_GRAPH_H
 
+#define GRAPH_VERTEX_UTILS_SZ 6
+#define GRAPH_ARC_UTILS_SZ 2
+#define GRAPH_UTILS_SZ 6
+
 #include "array.h"
 #include "hashmap.h"
 
@@ -11,23 +15,36 @@
 #define FOREACH_ARC(a, v) \
     for (a = v->arcs; a; a = a->next)
 
+typedef union {
+    struct vertex_struct *V;
+    struct arc_struct *A;
+    struct graph_struct *G;    
+    char *S;
+    long I;
+} util;
 
 typedef struct arc_struct {
     struct vertex_struct *tip;
     struct arc_struct *next;
     int len;
+    util utils[GRAPH_ARC_UTILS_SZ];
 } Arc;
 
 typedef struct vertex_struct {
     char *name;
     Arc *arcs;
+    util utils[GRAPH_VERTEX_UTILS_SZ];    
 } Vertex;
 
 typedef struct graph_struct {
+    char *id;
+    char util_types[15];
     Array *vertices;
+    /* map vertex name to its pointer */
     HashMap *str2v;
     long n; /* number of vertices */
     long m; /* number of arcs */
+    util utils[GRAPH_UTILS_SZ];
 } Graph;
 
 extern Graph *graph_new(long nvertices);

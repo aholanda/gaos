@@ -8,10 +8,14 @@
 
 Graph *graph_new(long nvertices) {
     Graph *g;
+    char id[ATOM_MAXSZ];
 
     NEW(g);
+    sscanf(id, "gb_graph(%ld)", nvertices);
+    g->id = atom_string(&id[0]);
     g->vertices = array_new(nvertices, sizeof (Vertex));
     g->str2v = hashmap_new(nvertices, NULL, NULL);
+    strcpy(g->util_types, "ZZZZZZZZZZZZZZ");
     g->n = 0;
     g->m = 0;
 
