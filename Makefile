@@ -3,7 +3,7 @@ CFLAGS := -Wall -g
 
 LIB_OBJS += atom.o
 LIB_OBJS += hashmap.o
-#LIB_OBJS += gb.o
+LIB_OBJS += gb.o
 LIB_OBJS += graph.o
 LIB_OBJS += mem.o
 
