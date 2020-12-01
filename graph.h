@@ -5,15 +5,8 @@
 #define GRAPH_ARC_UTILS_SZ 2
 #define GRAPH_UTILS_SZ 6
 
-#include "array.h"
+#include "arena.h"
 #include "hashmap.h"
-
-#define FOREACH_VERTEX(v, g) \
-    long i; \
-    for (i = 0; i < (g)->n && (((v)=array_get(g->vertices, i)) != NULL); i++)
-
-#define FOREACH_ARC(a, v) \
-    for (a = v->arcs; a; a = a->next)
 
 typedef union {
     struct vertex_struct *V;
@@ -26,7 +19,7 @@ typedef union {
 typedef struct arc_struct {
     struct vertex_struct *tip;
     struct arc_struct *next;
-    int len;
+    long len;
     util utils[GRAPH_ARC_UTILS_SZ];
 } Arc;
 
@@ -39,17 +32,19 @@ typedef struct vertex_struct {
 typedef struct graph_struct {
     char *id;
     char util_types[15];
-    Array *vertices;
+    Vertex *vertices;
     /* map vertex name to its pointer */
     HashMap *str2v;
     long n; /* number of vertices */
     long m; /* number of arcs */
+    /* main place to allocate elements */
+    Arena *data;
     util utils[GRAPH_UTILS_SZ];
 } Graph;
 
 extern Graph *graph_new(long nvertices);
-extern void graph_add_arc (Graph *g, char *from, char *to, int len);
-extern void graph_add_edge (Graph *g, char *from, char *to, int len);
+extern void graph_add_arc (Graph *g, char *from, char *to, long len);
+extern void graph_add_edge (Graph *g, char *from, char *to, long len);
 extern long graph_order(Graph *g);
 extern void graph_free(Graph *g);
 #endif
