@@ -101,6 +101,7 @@ char *atom_new(char *str, int len) {
 
     assert(str);
     assert(len >= 0);
+    assert(len < ATOM_MAX_LEN);
     h = hash_str(str, len);
     h %= NELEMS(buckets);
     for (p = buckets[h]; p; p = p->link) {
