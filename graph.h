@@ -1,11 +1,10 @@
 #ifndef LIBGRAPHS_GRAPH_H
 #define LIBGRAPHS_GRAPH_H
 
-#define GRAPH_VERTEX_UTILS_SZ 6
-#define GRAPH_ARC_UTILS_SZ 2
-#define GRAPH_UTILS_SZ 6
+#define GRAPH_V_UTILS_LEN 6
+#define GRAPH_A_UTILS_LEN 2
+#define GRAPH_G_UTILS_LEN 6
 
-#include "arena.h"
 #include "hashmap.h"
 
 typedef union {
@@ -20,13 +19,13 @@ typedef struct arc_struct {
     struct vertex_struct *tip;
     struct arc_struct *next;
     long len;
-    util utils[GRAPH_ARC_UTILS_SZ];
+    util utils[GRAPH_A_UTILS_LEN];
 } Arc;
 
 typedef struct vertex_struct {
     char *name;
     Arc *arcs;
-    util utils[GRAPH_VERTEX_UTILS_SZ];    
+    util utils[GRAPH_V_UTILS_LEN];    
 } Vertex;
 
 typedef struct graph_struct {
@@ -37,9 +36,7 @@ typedef struct graph_struct {
     HashMap *str2v;
     long n; /* number of vertices */
     long m; /* number of arcs */
-    /* main place to allocate elements */
-    Arena *data;
-    util utils[GRAPH_UTILS_SZ];
+    util utils[GRAPH_G_UTILS_LEN];
 } Graph;
 
 extern Graph *graph_new(long nvertices);
