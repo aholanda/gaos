@@ -4,6 +4,8 @@
 #define GRAPH_V_UTILS_LEN 6
 #define GRAPH_A_UTILS_LEN 2
 #define GRAPH_G_UTILS_LEN 6
+#define GRAPH_UTILS_LEN (GRAPH_V_UTILS_LEN \
+    + GRAPH_A_UTILS_LEN + GRAPH_G_UTILS_LEN)
 
 #include "hashmap.h"
 
@@ -30,7 +32,8 @@ typedef struct vertex_struct {
 
 typedef struct graph_struct {
     char *id;
-    char util_types[15];
+    /* number of utils type label plus null value */
+    char util_types[GRAPH_UTILS_LEN + 1];
     Vertex *vertices;
     /* map vertex name to its pointer */
     HashMap *str2v;
