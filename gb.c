@@ -300,10 +300,11 @@ static Arc *fill_arc(Graph *g, long a_idx, Arc *arcs_arr,
                 char ut = g->util_types[GRAPH_V_UTILS_LEN + u];
             
                 if (ut == 'Z')
-                    break;
+                    continue;
 
                 fill_utils(g, NULL, a, arcs_arr, ut, u,
                         &buf[0], file, lineno);
+                break;
             }
             last_u = u + 1;                            
         }
