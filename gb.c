@@ -129,6 +129,23 @@ static void fill_utils (Graph *g, Vertex *v, Arc *a,
     }
 }
 
+/* 
+    Calculate de index limit of the last element that has 
+    a label different from 'Z'
+*/
+static int get_last_util_idx(Graph *g, int begin, int end) {
+    int i, stop = 0;
+
+    for (i = begin; i < end; i++) {
+        if (g->util_types[i] == 'Z')
+            continue;
+        else
+            stop = i;
+    }
+    return stop;
+}
+
+
 static Graph *fill_graph(Graph *g, char data[], Arc *arcs_arr,
                          char *file, int lineno) {
     /* buffer length is due long graph ids */
@@ -137,13 +154,9 @@ static Graph *fill_graph(Graph *g, char data[], Arc *arcs_arr,
     int u = 0;/* utils index */
     int stop; /* where to stop the parsing based on util_types */
     char *p, *plim; /* pointer do char data and the limit for the pointer */
-    char *id;
 
-    for (i = GRAPH_V_UTILS_LEN+GRAPH_A_UTILS_LEN; i < GRAPH_UTILS_LEN; i++)
-        if (g->util_types[i] == 'Z')
-            continue;
-        else
-            stop = i;
+    stop = get_last_util_idx(g, GRAPH_V_UTILS_LEN+GRAPH_A_UTILS_LEN, 
+                             GRAPH_UTILS_LEN);
 
     p = &data[0];
     plim = &data[0] + strlen(&data[0]);
@@ -203,6 +216,12 @@ static Vertex *fill_vertex(Graph *g, long v_idx, Arc *arcs_arr,
     while (1) {
         i = 0;
         do {
+            /* unquote strings */
+            if (*p == '"') {
+                *p++;
+                continue;
+            }
+
             if (*p == '\n') {
                 stop = 1;
                 break;
@@ -214,25 +233,24 @@ static Vertex *fill_vertex(Graph *g, long v_idx, Arc *arcs_arr,
         *p++, buf[i] = '\0'; 
 
         if (field_no == 0) {
-            /* set string name with quotes removed */
-            buf[strlen(buf)-1] = '\0';
-            v->name = atom_string(&buf[1]);
+            v->name = atom_string(&buf[0]);
             field_no++;
         } else if (field_no == 1) {
             /* remove the letter V, e.g., V1 */
             v->arcs = get_arc_ptr(arcs_arr, buf, file, lineno);
             field_no++;
         } else {
-            for (u = last_u; u < GRAPH_G_UTILS_LEN; u++) {
+            for (u = last_u; u < GRAPH_V_UTILS_LEN; u++) {
                 char ut = g->util_types[u];
                 
                 if (ut == 'Z')
-                    break;
-                
-                fill_utils(g, v, NULL, arcs_arr, ut, u,
-                        &buf[0], file, lineno);
+                    continue;
+                               
+                 fill_utils(g, v, NULL, arcs_arr, ut, u,
+                            &buf[0], file, lineno);
+                 break;                    
             }
-            last_u = u + 1;        
+            last_u = u + 1;
         }
         if (stop)
             break;
