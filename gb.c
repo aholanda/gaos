@@ -9,23 +9,13 @@
 #include "io.h"
 #include "mem.h"
 
-/* No line of the file has more than 79 characters, SGB book page 406*/
-#define GB_BUFFER_SZ 80 /* line size plus new line control character */
 #define GB_UTIL_TYPES_SZ 14 /* number of util types available */
-#define GB_SEP ',' /* separator for the graph elements */
-
-#define GB_PANIC(err, fn, lnno) do {\
-        fprintf(stderr, "%s:%d %s\n", (fn), (lnno), (err)); \
-        exit(EXIT_FAILURE); \
-    } while(0)
-
-#define GB_SECTION_MARK '*'
 
 enum section {GRAPHBASE, VERTICES, ARCS, CHECKSUM};
 char *section_names[] = {"GraphBase", "Vertices", "Arcs", "Checksum"};
 
-/* buffer for main function */
-static char buf[GB_BUFFER_SZ];
+/* buffer for characters in each line of the gb file */
+static char line[GB_MAXLINE];
 
 static Vertex *get_vertex_ptr(Graph *g, char field[],
                         char *file, int lineno) {
@@ -144,31 +134,37 @@ static Graph *fill_graph(Graph *g, char data[], Arc *arcs_arr,
     /* buffer length is due long graph ids */
     static char buf[ATOM_MAX_LEN];
     int i = 0, field_no = 0;
-    int u = 0, last_u = 0; /* utils index */
-    char *p;
+    int u = 0;/* utils index */
+    int stop; /* where to stop the parsing based on util_types */
+    char *p, *plim; /* pointer do char data and the limit for the pointer */
     char *id;
 
+    for (i = GRAPH_V_UTILS_LEN+GRAPH_A_UTILS_LEN; i < GRAPH_UTILS_LEN; i++)
+        if (g->util_types[i] == 'Z')
+            continue;
+        else
+            stop = i;
 
     p = &data[0];
+    plim = &data[0] + strlen(&data[0]);
     while (1) {
         i = 0;
-        do {
-            if (*p == '\n' || *p == '\\') {
+        while (p <= plim) {
+            /* ignore control chars and unquote strings */
+            if (*p == '\n' || *p == '\\' || *p == '"') {
                 *p++;
                 continue;
             }
-
-            if (*p == '\0')
-                return g;
-
+            if (*p == GB_SEP) {
+                *p++;
+                buf[i] = '\0';
+                break;
+            }
             buf[i++] = *p++;
-        } while (*p != GB_SEP);
-        *p++, buf[i] = '\0';
+        }         
 
-        if (field_no == 0) {
-            /* unquote the string */
-            buf[strlen(&buf[0])] = '\0';
-            g->id = atom_string(&buf[1]);
+        if (field_no == 0) {          
+            g->id = atom_string(&buf[0]);
             field_no++;
         } else if (field_no == 1) {
             g->n = atol(&buf[0]);
@@ -177,30 +173,30 @@ static Graph *fill_graph(Graph *g, char data[], Arc *arcs_arr,
             g->m = atol(&buf[0]);
             field_no++;
         } else {
-            for (u = last_u; u < GRAPH_G_UTILS_LEN; u++) {
+            if (u < GRAPH_G_UTILS_LEN) {
                 char ut = 
                     g->util_types[GRAPH_V_UTILS_LEN + GRAPH_A_UTILS_LEN + u];
-                if (ut == 'Z') 
-                    break;
-
-                fill_utils(g, NULL, NULL, arcs_arr, ut, u,
-                            &buf[0], file, lineno);
+                if (ut != 'Z')  
+                    fill_utils(g, NULL, NULL, arcs_arr, ut, u,
+                               &buf[0], file, lineno);
+                u++;
             }
-            last_u = u + 1;
         }
+        if ((GRAPH_V_UTILS_LEN + GRAPH_A_UTILS_LEN + u - 1) == stop)
+            break;
     }
+    return g;
 }
 
 static Vertex *fill_vertex(Graph *g, long v_idx, Arc *arcs_arr, 
                             char *line,
                             char *file, int lineno) {
     Vertex *v;
-    static char buf[GB_BUFFER_SZ];
+    static char buf[GB_MAXLINE];
     char *p; /* pointer  to char */
     int i, field_no = 0; /* counters and field numbering */
     int u = 0, last_u = 0; /* util type index, last util type assigned */
     int stop = 0; /* signal to stop the line parsing */
-    long j; /* used for vertex index */
 
     v = &g->vertices[v_idx];
     p = line;
@@ -248,7 +244,7 @@ static Arc *fill_arc(Graph *g, long a_idx, Arc *arcs_arr,
                             char *line,
                             char *file, int lineno) {
     Arc *a;
-    static char buf[GB_BUFFER_SZ];
+    static char buf[GB_MAXLINE];
     char *p; /* pointer  to char */
     int i, field_no = 0; /* counters and field numbering */
     int u = 0, last_u = 0; /* util type index, last util type assigned */
@@ -317,12 +313,12 @@ Graph *gb_read(char *filename) {
 
     assert(filename);
     FOPEN(fp, filename, "r");
-    while (fgets(buf, GB_BUFFER_SZ, fp) != NULL) {
+    while (fgets(line, GB_MAXLINE, fp) != NULL) {
         lineno++;
         /* Evalute section switch */
-        if (buf[0] == GB_SECTION_MARK) {
+        if (line[0] == GB_SECTION_MARK) {
             for (i = GRAPHBASE; i <= CHECKSUM; i++) {
-                if (strncmp(&buf[2], section_names[i], 
+                if (strncmp(&line[2], section_names[i], 
                     strlen(section_names[i])) == 0) {
                     section_no = i;
                     break;
@@ -333,40 +329,40 @@ Graph *gb_read(char *filename) {
         /* Evaluate sections */
         if (section_no == GRAPHBASE) {
             if (lineno == 1) {
-                ret = sscanf(buf, "* GraphBase graph (util_types %14[ZIVSA],%ldV,%ldA)\n",
-                            buf + GB_BUFFER_SZ, &n, &m);
+                ret = sscanf(line, "* GraphBase graph (util_types %14[ZIVSA],%ldV,%ldA)\n",
+                            line + GB_MAXLINE, &n, &m);
                 assert(ret > 0);
                 assert(n > 0);
                 g = graph_new(n);
-                strncpy(&g->util_types[0], buf + GB_BUFFER_SZ, GRAPH_UTILS_LEN);
+                strncpy(&g->util_types[0], line + GB_MAXLINE, GRAPH_UTILS_LEN);
                 arcs_arr = CALLOC(m, sizeof(Arc));
             } else {
-                strncat(g_attrs_buf, buf, GB_BUFFER_SZ);
+                strncat(g_attrs_buf, line, GB_MAXLINE);
             }
         } else if (section_no == VERTICES) {
             /* to ignore the section mark */
-            if (buf[0] == GB_SECTION_MARK) {
+            if (line[0] == GB_SECTION_MARK) {
                 vcount = 0;
                 g = fill_graph(g, g_attrs_buf, arcs_arr,
                                 filename, lineno);
                 continue;            
             }
             fill_vertex(g, vcount, arcs_arr, 
-                        &buf[0],
+                        &line[0],
                         filename, lineno);
             vcount++;            
         } else if (section_no == ARCS) {
-            if (buf[0] == GB_SECTION_MARK) {
+            if (line[0] == GB_SECTION_MARK) {
                 acount = 0;
                 continue;
             }
             fill_arc(g, acount, arcs_arr, 
-                        &buf[0],
+                        &line[0],
                         filename, lineno);
             acount++;                            
         } else if (section_no == CHECKSUM) {
             long checksum = 0;
-            sscanf(&buf[0], "* Checksum %ld\n", &checksum);
+            sscanf(&line[0], "* Checksum %ld\n", &checksum);
 #warning handle checksum
         } else {
             GB_PANIC("gb file seems not to obey the specs", filename, lineno);
