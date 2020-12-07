@@ -12,7 +12,9 @@ Graph *graph_new(long nvertices) {
 
     NEW(graph);
     sprintf(id, "graph(%ld)", nvertices);
-    graph->id = atom_string(&id[0]);
+    graph->nbuckets = nvertices + 1;
+    graph->buckets = (Atom **)CALLOC(graph->nbuckets, sizeof (Atom));
+    graph->id = atom_string(graph->buckets, graph->nbuckets, &id[0]);
     graph->vertices = CALLOC(nvertices, sizeof(Vertex));
     graph->str2v = hashmap_new(nvertices, NULL, NULL);
     strcpy(graph->util_types, "ZZZZZZZZZZZZZZ");
@@ -26,7 +28,7 @@ static Vertex *lookup_vertex(Graph *g, char *name) {
     Vertex *v;
     char *key;
 
-    key = atom_string(name);
+    key = atom_string(g->buckets, g->nbuckets, name);
     v = (Vertex *)hashmap_get(g->str2v, key);
     if (v == NULL) {
         v = &g->vertices[g->n++];
@@ -39,12 +41,13 @@ static Vertex *lookup_vertex(Graph *g, char *name) {
 }
 
 static Arc *new_arc (Graph *g, Vertex *tip, int len) {
-    Arc *arc;
+    Arc *a;
     
-    NEW(arc);
-    arc->tip = tip;
-    arc->len = len;
-    return arc;
+    NEW(a);
+    a->tip = tip;
+    a->len = len;
+    a->next = NULL;
+    return a;
 } 
 
 void graph_add_arc (Graph *g, char *from, char *to, long len) {
@@ -67,7 +70,7 @@ void graph_add_edge (Graph *g, char *from, char *to, long len) {
     /* avoid duplication due loop */
     if (strncmp(to, from, strlen(to)) != 0) {
         graph_add_arc (g, to, from, len);
-        g->m--; /* eliminate double direction counting */
+         g->m--; /* discount one arc direction */
     }
 }
 
@@ -76,17 +79,24 @@ long graph_order(Graph *g) {
     return g->n;
 }
 
+long graph_size(Graph *g) {
+    assert(g);
+    return g->m;
+}
+
 void graph_free(Graph *g) {
     Vertex *v;
     Arc *a, *b;
 
-    for (v = g->vertices; v < g->vertices + g->n; v++)
+    /* release arcs */
+    for (v = &g->vertices[0]; v < &g->vertices[0] + g->n; v++)
         for (a = v->arcs; a; a = b) {
             b = a->next;
             FREE(a);
         }
     hashmap_free(&g->str2v);
-    atom_free();   
+    atom_free(g->buckets, g->nbuckets);
+    FREE(g->buckets);
     FREE(g->vertices);
     FREE(g);
 }
