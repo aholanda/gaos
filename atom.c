@@ -10,16 +10,6 @@
     functions.
 */
 
-#define NELEMS(x) ((sizeof (x))/(sizeof ((x)[0])))
-#define BUCKET_LEN 4096
-
-
-static struct atom {
-    struct atom *link;
-    int len;
-    char *str;
-} *buckets[BUCKET_LEN];
-
 static unsigned long scatter[] = {
 2078917053, 143302914, 1027100827, 1953210302, 755253631, 2002600785,
 1405390230, 45248011, 1099951567, 433832350, 2018585307, 438263339,
@@ -94,7 +84,7 @@ static struct atom *alloc_new_entry(struct atom *buckets[],
     return p;
 }
 
-char *atom_new(char *str, int len) {
+char *atom_new(Atom *buckets[], int nbuckets, char *str, int len) {
     unsigned long h;
     int i;
     struct atom *p;
@@ -103,7 +93,7 @@ char *atom_new(char *str, int len) {
     assert(len >= 0);
     assert(len < ATOM_MAX_LEN);
     h = hash_str(str, len);
-    h %= NELEMS(buckets);
+    h %= nbuckets;
     for (p = buckets[h]; p; p = p->link) {
         if (len == p->len) {
             for (i = 0; i < len && p->str[i] == str[i]; i++) ;
@@ -116,16 +106,16 @@ char *atom_new(char *str, int len) {
     return p->str;
 }
 
-char *atom_string(char *str) {
+char *atom_string(Atom *buckets[], int nbuckets, char *str) {
     assert(str);
-    return atom_new(str, strlen(str));
+    return atom_new(buckets, nbuckets, str, strlen(str));
 }
 
-void atom_free() {
+void atom_free(Atom *buckets[], int nbuckets) {
     struct atom *p, *q;
     int i;
 
-    for (i = 0; i < BUCKET_LEN; i++)   
+    for (i = 0; i < nbuckets; i++)   
         for (p = buckets[i]; p; p = q) {
             q = p->link;
             FREE(p);
