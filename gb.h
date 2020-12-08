@@ -15,6 +15,6 @@
 #define GB_SECTION_MARK '*'
 
 extern Graph*gb_read(char *filename);
-extern void gb_write(Graph *graph);
+extern void gb_write(Graph *graph, char *filename);
 
 #endif
