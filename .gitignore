@@ -1,5 +1,5 @@
 # C
+*.a
 *.o
-## used only for tests
-main
-main.c
+*.so
+*_test
