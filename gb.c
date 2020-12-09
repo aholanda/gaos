@@ -402,7 +402,19 @@ static void fwrite_arc(FILE *fp, HashMap *a2aidx, Arc **arcs_parr, Arc *a) {
     Arc *a_idx; 
 
     a_idx = hashmap_get(a2aidx, a);
-    fprintf(fp, "A%ld",  &a_idx - &arcs_parr[0]);
+    assert(a_idx);
+    fprintf(fp, "A%ld",  a_idx - (Arc *)&arcs_parr[0]);
+    fwrite_separator(fp);
+}
+
+static void fwrite_integer(FILE *fp, long i) {
+    fprintf(fp, "%ld", i);
+    fwrite_separator(fp);
+}
+
+static void fwrite_string(FILE *fp, char *str) {
+    fprintf(fp, "\"%s\"", str);
+    fwrite_separator(fp);
 }
 
 static void fwrite_vertex(FILE *fp, Graph *g, Vertex *v) {
@@ -410,6 +422,7 @@ static void fwrite_vertex(FILE *fp, Graph *g, Vertex *v) {
 
     i = v - &g->vertices[0];
     fprintf(fp, "V%ld", i);
+    fwrite_separator(fp);
 }
 
 static void fwrite_util_value(FILE *fp, Graph *g, char ut, util *pu,
@@ -419,10 +432,10 @@ static void fwrite_util_value(FILE *fp, Graph *g, char ut, util *pu,
             fwrite_arc(fp, a2aidx, arcs_parr, (*pu).A);
         break;
         case 'I':
-            fprintf(fp, "\"%ld\"", (*pu).I);
+            fwrite_integer(fp, (*pu).I);
         break;
         case 'S':
-            fprintf(fp, "\"%s\"", (*pu).S);
+            fwrite_string(fp, (*pu).S);
         break;
         case 'V':
             fwrite_vertex(fp, g, (*pu).V);
@@ -455,31 +468,27 @@ static void fwrite_utils(FILE *fp, Graph*g, Vertex *v, Arc *a,
                 if (ut != 'Z') {
                     pu = &g->utils[u - offset];
                     fwrite_util_value(fp, g, ut, pu, a2aidx, arcs_parr);
-                    fwrite_separator(fp);
                 }
             }
         break;
         case VERTICES:
-            assert(v);
             offset = 0;
-            for (u = offset; u < GRAPH_A_UTILS_LEN; u++) {
+            for (u = offset; u < GRAPH_V_UTILS_LEN; u++) {
                 ut = g->util_types[u];
                 if (ut != 'Z') {
                     pu = &v->utils[u - offset];
                     fwrite_util_value(fp, g, ut, pu, a2aidx, arcs_parr);
-                    fwrite_separator(fp);
+                    fflush(fp);
                 }
             }
         break;
         case ARCS:
-            assert(a);
             offset = GRAPH_V_UTILS_LEN;
             for (u = offset; u < offset + GRAPH_A_UTILS_LEN; u++) {
                 ut = g->util_types[u];
                 if (ut != 'Z') {
                     pu = &a->utils[u - offset];
                     fwrite_util_value(fp, g, ut, pu, a2aidx, arcs_parr);
-                    fwrite_separator(fp);
                 }
             }
         break;
@@ -494,6 +503,7 @@ static void fwrite_utils(FILE *fp, Graph*g, Vertex *v, Arc *a,
     /* switch the last separator by new line */
     fseek(fp, -1, SEEK_CUR);
     fputc('\n', fp);
+    fflush(fp);
 }
 
 static void fwrite_graphbase_section(FILE *fp, Graph *g) {
@@ -530,12 +540,10 @@ static void fwrite_graphbase_section(FILE *fp, Graph *g) {
     fputc('\n', fp); /* put the attributes and util types in a new line */
 
     /* effective number of vertices */
-    fprintf(fp, "%ld", g->n);
-    fwrite_separator(fp);
+    fwrite_integer(fp, g->n);
  
     /* effective number of arcs */
-    fprintf(fp, "%ld", g->m);    
-    fwrite_separator(fp);
+    fwrite_integer(fp, g->m);    
 
     fwrite_utils(fp, g, NULL, NULL, NULL, NULL);
     fflush(fp);   
@@ -546,24 +554,24 @@ static void fwrite_vertices_section(FILE *fp, Graph *g, HashMap *a2aidx, Arc **a
     Arc *a;
 
     fprintf(fp, "* %s\n", section_names[VERTICES]);
+     fflush(fp);
     for (v = &g->vertices[0]; v < &g->vertices[0] + g->n; v++) {
         a = v->arcs;
         /* Name */
-        if (v->name) {
-            fprintf(fp, "\"%s\"", v->name);
-            fwrite_separator(fp);  
-        } else {
-            fprintf(fp, "\"0\"");
-            fwrite_separator(fp);  
-        }
-
-        if (a == NULL) {
-            /* next arc */
-            fprintf(fp, "0");
-            fwrite_separator(fp);
-        } else {
+        if (v->name)
+            fwrite_string(fp, v->name);
+        else 
+            fwrite_string(fp, "\"0\"");        
+        
+        fflush(fp);
+        /* next arc */
+        if (a == NULL)
+            fwrite_string(fp, "0");
+        else 
             fwrite_arc(fp, a2aidx, arcs_parr, a);
-        }
+        
+        fflush(fp);
+
         fwrite_utils(fp, g, v, NULL, a2aidx, arcs_parr);
     }
 }
@@ -607,8 +615,6 @@ void gb_write(Graph *g, char *filename) {
     FOPEN(fp, filename, "w");
 
     fwrite_graphbase_section(fp, g);
-    FCLOSE(fp);
-    return;
 
     a2aidx = hashmap_new(g->m, NULL, NULL);
     arcs_parr = (Arc **)CALLOC(g->m, sizeof(Arc *));
@@ -619,6 +625,7 @@ void gb_write(Graph *g, char *filename) {
             acount++;
         }
     fwrite_vertices_section(fp, g, a2aidx, arcs_parr);
+    return;
 
     fwrite_arcs_section(fp, g, a2aidx, arcs_parr);
 
