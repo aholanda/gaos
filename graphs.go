@@ -107,3 +107,27 @@ func (g *Graph) AddEdge(from, to string, len int) {
 		g.M--
 	}
 }
+
+type VertexIterator struct {
+	curIdx int
+	graph  *Digraph
+}
+
+func NewVertexIterator(d *Digraph) *VertexIterator {
+	return &VertexIterator{
+		curIdx: 0,
+		graph:  d,
+	}
+}
+
+func (vi *VertexIterator) Value() *Vertex {
+	var v *Vertex
+	v = &d.Vertices[vi.curIdx]
+	vi.curIdx += 1
+
+	return v
+}
+
+func (vi *VertexIterator) HasNext() bool {
+	return vi.curIdx < len(vi.graph.Vertices)
+}
