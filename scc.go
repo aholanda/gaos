@@ -10,7 +10,7 @@ type KosarajuSharirSCC struct {
 	digraph *Digraph
 }
 
-func KosarajuSharirSCCNew(d *Digraph) *KosarajuSharirSCC {
+func NewKosarajuSharirSCC(d *Digraph) *KosarajuSharirSCC {
 	return &KosarajuSharirSCC{
 		visited: make(map[*Vertex]bool),
 		id:      make(map[*Vertex]int),
