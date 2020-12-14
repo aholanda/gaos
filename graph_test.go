@@ -27,7 +27,7 @@ func TestDigraph(t *testing.T) {
 				i, names[i], v.Name)
 		}
 
-		for a := v.Arcs; a == nil; a = a.Next {
+		for a := v.Arcs; a != nil; a = a.Next {
 			if a.Tip == nil {
 				t.Errorf("Tip is nil for vertex %v", v.Name)
 			}
