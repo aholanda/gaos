@@ -1,5 +1,2 @@
-# C
-*.a
-*.o
-*.so
-*_test
+debug.test
+graph.gb
