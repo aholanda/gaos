@@ -76,11 +76,12 @@ func (d *Digraph) AddArc(from, to string, length int) {
 	b = v.Arcs
 	v.Arcs = a
 	a.Next = b
+	a.Tip = w
 
 	d.M++
 }
 
-func Reverse(d *Digraph) {
+func Reverse(d *Digraph) *Digraph {
 	rev := NewDigraph(d.N)
 	rev.Name = d.Name + "Reversed"
 	for _, v := range d.Vertices {
@@ -89,6 +90,7 @@ func Reverse(d *Digraph) {
 			rev.AddArc(w.Name, v.Name, a.Len)
 		}
 	}
+	return rev
 }
 
 type Graph struct {
@@ -122,7 +124,7 @@ func NewVertexIterator(d *Digraph) *VertexIterator {
 
 func (vi *VertexIterator) Value() *Vertex {
 	var v *Vertex
-	v = &d.Vertices[vi.curIdx]
+	v = &vi.graph.Vertices[vi.curIdx]
 	vi.curIdx += 1
 
 	return v
