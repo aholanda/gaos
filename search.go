@@ -26,26 +26,28 @@ func (s *Stack) Pop() (*Vertex, bool) {
 }
 
 type DepthFirstOrder struct {
+	digraph     *Digraph
 	visited     map[*Vertex]bool
 	pre         []*Vertex // vertices in preorder
 	post        []*Vertex // vertices in postorder
 	reversePost *Stack    // vertices in reverse
 }
 
-func NewDepthFirstOrder() *DepthFirstOrder {
+func NewDepthFirstOrder(d *Digraph) *DepthFirstOrder {
 	return &DepthFirstOrder{
+		digraph: d,
 		visited: make(map[*Vertex]bool),
 		pre:     make([]*Vertex, d.Order()),
 		post:    make([]*Vertex, d.Order()),
 	}
 }
 
-func (dfo *DepthFirstOrder) Compute(d *Digraph) {
-	vIter := NewVertexIterator(d)
+func (dfo *DepthFirstOrder) Compute() {
+	vIter := NewVertexIterator(dfo.digraph)
 	for vIter.HasNext() {
 		v := vIter.Value()
 		if dfo.visited[v] == false {
-			dfo.dfs(d, v)
+			dfo.dfs(dfo.digraph, v)
 		}
 	}
 }
