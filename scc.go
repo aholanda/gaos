@@ -12,21 +12,26 @@ type KosarajuSharirSCC struct {
 
 func NewKosarajuSharirSCC(d *Digraph) *KosarajuSharirSCC {
 	return &KosarajuSharirSCC{
-		visited: make(map[*Vertex]bool),
+		digraph: d,
+		visited: make(map[*Vertex]bool, d.Order()),
 		id:      make(map[*Vertex]int),
 		count:   0,
-		digraph: d,
 	}
 }
 
 func (ks *KosarajuSharirSCC) Compute() {
-	var order DepthFirstOrder
+	var order *DepthFirstOrder
 
-	order = DepthFirstOrder(ks.d.Reverse())
-	for v := range order.ReversePost() {
+	reversedDigraph := Reverse(ks.digraph)
+	order = NewDepthFirstOrder(reversedDigraph)
+	order.Compute()
+
+	stack := order.ReversePost()
+	for stack.IsEmpty() {
+		v, _ := stack.Pop()
 		if ks.visited[v] == false {
 			ks.dfs(v)
-			ks.count += 1
+			ks.count++
 		}
 	}
 }
