@@ -33,14 +33,14 @@ func WritePjk(digraph *g.Digraph, filename string) {
 	fmt.Fprintf(file, "%v%v %d\n",
 		PjkSectionMark,
 		PjkSectionNames[PjkVerticesSectionEnum],
-		digraph.Order())
+		digraph.V())
 
 	vIter := g.NewVertexIterator(digraph)
-	for i := 0; vIter.HasNext(); i++ {
+	for vIter.HasNext() {
 		v := vIter.Value()
-		vertexToIndex[v] = i
 
-		fmt.Fprintf(file, "%d%s\"%s\"", i, PjkSeparator, v.Name)
+		fmt.Fprintf(file, "%d%s\"%s\"", v, PjkSeparator,
+			digraph.VertexName(v))
 	}
 
 	// arcs section
