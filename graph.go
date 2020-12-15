@@ -12,7 +12,7 @@ type Digraph struct {
 	Adjs         [][]VertexId        // array of adjacencies
 	N            int                 // number of vertices
 	M            int                 // number of arcs
-	Keys         []*string           // store vertices' names
+	Keys         []string            // store vertices' names
 	NameToVertex map[string]VertexId // names for vertices (optional)
 }
 
@@ -22,7 +22,7 @@ func NewDigraph(nvertices int) *Digraph {
 		Adjs:         make([][]VertexId, nvertices),
 		N:            nvertices,
 		M:            0, // number of arcs
-		Keys:         make([]*string, nvertices),
+		Keys:         make([]string, nvertices),
 		NameToVertex: make(map[string]VertexId, nvertices),
 	}
 	for i := range d.Adjs {
@@ -32,7 +32,19 @@ func NewDigraph(nvertices int) *Digraph {
 }
 
 func (d *Digraph) NameVertex(v VertexId, name string) {
+	if d.hasVertex(v) {
+		if _, ok := d.NameToVertex[name]; !ok {
+			d.NameToVertex[name] = v
+			d.Keys[v] = name
+		}
+	}
+}
 
+func (d *Digraph) VertexName(v VertexId) string {
+	if d.hasVertex(v) {
+		return d.Keys[v]
+	}
+	return ""
 }
 
 // Order of the graph
@@ -42,6 +54,11 @@ func (d *Digraph) V() int {
 
 // Size of the graph in arcs
 func (d *Digraph) A() int {
+	return d.M
+}
+
+// Size of the graph in arcs
+func (d *Digraph) Size() int {
 	return d.M
 }
 
@@ -100,5 +117,9 @@ func (g *Graph) AddEdge(v, w VertexId) {
 
 // Size of the graph in edges
 func (g *Graph) E() int {
+	return g.MM
+}
+
+func (g *Graph) Size() int {
 	return g.MM
 }
