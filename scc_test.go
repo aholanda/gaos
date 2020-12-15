@@ -39,10 +39,27 @@ func makeDigraph() *Digraph {
 func TestKosarajuSharirSCC(t *testing.T) {
 	var d *Digraph
 	var scc *KosarajuSharirSCC
+	// Expected number of vertices for each strongly
+	// connected component.
+	var expSCCElems [5]int = [5]int{1, 5, 4, 2, 1}
 
 	d = makeDigraph()
 	scc = NewKosarajuSharirSCC(d)
 	scc.Compute()
+
+	sccToV := make(map[int][]int)
+	for v := range scc.id {
+		c := scc.id[v]
+		if _, ok := sccToV[c]; !ok {
+			sccToV[c] = make([]int, 0)
+		}
+		sccToV[c] = append(sccToV[c], v)
+	}
+	for c := 0; c < scc.count; c++ {
+		if len(sccToV[c]) != expSCCElems[c] {
+			t.Errorf("Expected %d vertices for SCC #%d, got %d", expSCCElems[c], c+1, len(sccToV[c]))
+		}
+	}
 
 	if scc.count != 5 {
 		t.Errorf("Expected %d strongly connected components, got %d", 5, scc.count)
