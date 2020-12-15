@@ -2,19 +2,19 @@ package graphs
 
 type DepthFirstOrder struct {
 	digraph     *Digraph
-	visited     map[*Vertex]bool
-	pre         []*Vertex // vertices in preorder
-	post        []*Vertex // vertices in postorder
-	reversePost *stackV   // vertices in reverse
+	visited     []bool
+	pre         []VertexId // vertices in preorder
+	post        []VertexId // vertices in postorder
+	reversePost *stackV    // vertices in reverse
 }
 
 func NewDepthFirstOrder(d *Digraph) *DepthFirstOrder {
 	dfo := DepthFirstOrder{
 		digraph:     d,
-		visited:     make(map[*Vertex]bool),
-		pre:         make([]*Vertex, d.Order()),
-		post:        make([]*Vertex, d.Order()),
-		reversePost: newStackV(d.Order()),
+		visited:     make([]bool, d.V()),
+		pre:         make([]VertexId, d.V()),
+		post:        make([]VertexId, d.V()),
+		reversePost: newStackV(d.V()),
 	}
 	vIter := NewVertexIterator(d)
 	for vIter.HasNext() {
@@ -34,14 +34,13 @@ func (dfo *DepthFirstOrder) Compute() {
 	}
 }
 
-func (dfo *DepthFirstOrder) dfs(d *Digraph, v *Vertex) {
+func (dfo *DepthFirstOrder) dfs(d *Digraph, v VertexId) {
 	dfo.pre = append(dfo.pre, v)
 
 	dfo.visited[v] = true
-	aIter := NewArcIterator(v)
+	aIter := NewArcIterator(d, v)
 	for aIter.HasNext() {
-		a := aIter.Value()
-		w := a.Tip
+		w := aIter.Value()
 		if dfo.visited[w] == false {
 			dfo.dfs(d, w)
 		}
@@ -50,14 +49,14 @@ func (dfo *DepthFirstOrder) dfs(d *Digraph, v *Vertex) {
 	dfo.reversePost.push(v)
 }
 
-func (dfo *DepthFirstOrder) Pre() []*Vertex {
+func (dfo *DepthFirstOrder) Pre() []VertexId {
 	return dfo.pre
 }
 
-func (dfo *DepthFirstOrder) Post() []*Vertex {
+func (dfo *DepthFirstOrder) Post() []VertexId {
 	return dfo.post
 }
 
-func (dfo *DepthFirstOrder) ReversePost() []*Vertex {
+func (dfo *DepthFirstOrder) ReversePost() []VertexId {
 	return dfo.reversePost.verts
 }

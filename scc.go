@@ -4,8 +4,8 @@ package graphs
 // by Sedgewick and Wayne
 
 type KosarajuSharirSCC struct {
-	visited map[*Vertex]bool
-	id      map[*Vertex]int
+	visited []bool
+	id      []int
 	count   int
 	digraph *Digraph
 }
@@ -13,8 +13,8 @@ type KosarajuSharirSCC struct {
 func NewKosarajuSharirSCC(d *Digraph) *KosarajuSharirSCC {
 	scc := &KosarajuSharirSCC{
 		digraph: d,
-		visited: make(map[*Vertex]bool, d.Order()),
-		id:      make(map[*Vertex]int, d.Order()),
+		visited: make([]bool, d.V()),
+		id:      make([]int, d.V()),
 		count:   0,
 	}
 	vIter := NewVertexIterator(d)
@@ -39,17 +39,13 @@ func (ks *KosarajuSharirSCC) Compute() {
 	}
 }
 
-func (ks *KosarajuSharirSCC) dfs(v *Vertex) {
-	var a *Arc
-	var w *Vertex
-
+func (ks *KosarajuSharirSCC) dfs(v VertexId) {
 	ks.visited[v] = true
 	ks.id[v] = ks.count
 
-	aIter := NewArcIterator(v)
+	aIter := NewArcIterator(ks.digraph, v)
 	for aIter.HasNext() {
-		a = aIter.Value()
-		w = a.Tip
+		w := aIter.Value()
 
 		if ks.visited[w] == false {
 			ks.dfs(w)
