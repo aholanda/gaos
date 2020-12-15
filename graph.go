@@ -1,93 +1,81 @@
 package graphs
 
-// Go keeps compatibility of 64-bit types when
-// compiled in 32-bit architecture.
-// https://groups.google.com/g/golang-nuts/c/mtnn-01Dh_I
+import (
+	"errors"
+	"strconv"
+)
 
-var defaultGraphName = "graph"
-
-type Vertex struct {
-	Name string // string to identify the vertex
-	Arcs *Arc   // Head of adjacency list of arcs
-}
-
-type Arc struct {
-	Tip  *Vertex // Vertex pointed by this Arc
-	Next *Arc    // Next arc in the adjacency list
-	Len  int     // Arc length
-}
-
-func (d *Digraph) NewArc(v *Vertex, length int) *Arc {
-	return &Arc{v, nil, length}
-}
-
-func (a *Arc) Length() int {
-	return a.Len
-}
+type VertexId int
 
 type Digraph struct {
-	Name         string             // name of the graph
-	Vertices     []Vertex           // array of vertices
-	N            int                // number of vertices
-	M            int                // number of arcs
-	NameToVertex map[string]*Vertex // names for vertices (optional)
+	ID           string              // name of the graph
+	Adjs         [][]VertexId        // array of adjacencies
+	N            int                 // number of vertices
+	M            int                 // number of arcs
+	Keys         []*string           // store vertices' names
+	NameToVertex map[string]VertexId // names for vertices (optional)
 }
 
 func NewDigraph(nvertices int) *Digraph {
-	return &Digraph{
-		Name:         defaultGraphName,
-		Vertices:     make([]Vertex, nvertices),
-		N:            0,
-		M:            0,
-		NameToVertex: make(map[string]*Vertex, 0),
+	d := &Digraph{
+		ID:           "digraph",
+		Adjs:         make([][]VertexId, nvertices),
+		N:            nvertices,
+		M:            0, // number of arcs
+		Keys:         make([]*string, nvertices),
+		NameToVertex: make(map[string]VertexId, nvertices),
 	}
+	for i := range d.Adjs {
+		d.Adjs[i] = make([]VertexId, 0)
+	}
+	return d
 }
 
-func (d *Digraph) NewVertex(name string) *Vertex {
-	if v, ok := d.NameToVertex[name]; ok {
-		return v
-	}
+func (d *Digraph) NameVertex(v VertexId, name string) {
 
-	v := &d.Vertices[d.N]
-	d.N++
-	v.Name = name
-	v.Arcs = nil
-	d.NameToVertex[name] = v
-
-	return v
 }
 
-func (d *Digraph) Order() int {
+// Order of the graph
+func (d *Digraph) V() int {
 	return d.N
 }
 
-func (d *Digraph) Size() int {
+// Size of the graph in arcs
+func (d *Digraph) A() int {
 	return d.M
 }
 
-func (d *Digraph) AddArc(from, to string, length int) {
-	var a, b *Arc
-	var v, w *Vertex
+func (d *Digraph) AddArc(v, w VertexId) error {
+	if d.hasVertex(v) == false {
+		from := strconv.Itoa(int(v))
+		return errors.New("vertex index " + from + " is out of bounds")
+	}
 
-	v = d.NewVertex(from)
-	w = d.NewVertex(to)
-	a = d.NewArc(w, length)
+	if d.hasVertex(w) == false {
+		to := strconv.Itoa(int(w))
+		return errors.New("vertex index " + to + " is out of bounds")
+	}
 
-	b = v.Arcs
-	v.Arcs = a
-	a.Next = b
-	a.Tip = w
+	d.Adjs[v] = append(d.Adjs[v], w)
 
 	d.M++
+
+	return nil
+}
+
+func (d *Digraph) hasVertex(v VertexId) bool {
+	if int(v) < d.N {
+		return true
+	}
+	return false
 }
 
 func Reverse(d *Digraph) *Digraph {
 	rev := NewDigraph(d.N)
-	rev.Name = d.Name + "Reversed"
-	for _, v := range d.Vertices {
-		for a := v.Arcs; a != nil; a = a.Next {
-			w := a.Tip
-			rev.AddArc(w.Name, v.Name, a.Len)
+	rev.ID = d.ID + "Reversed"
+	for v := range d.Adjs {
+		for _, w := range d.Adjs[v] {
+			rev.AddArc(w, VertexId(v))
 		}
 	}
 	return rev
@@ -95,17 +83,22 @@ func Reverse(d *Digraph) *Digraph {
 
 type Graph struct {
 	*Digraph
+	MM int
 }
 
 func NewGraph(nvertices int) *Graph {
-	return &Graph{NewDigraph(nvertices)}
+	return &Graph{NewDigraph(nvertices), 0}
 }
 
-func (g *Graph) AddEdge(from, to string, len int) {
-	g.AddArc(from, to, len)
-	if from != to { // avoid duplication on self-loops
-		g.AddArc(to, from, len)
-		// discount double direction to emulate an edge
-		g.M--
+func (g *Graph) AddEdge(v, w VertexId) {
+	g.AddArc(v, w)
+	if v != w {
+		g.AddArc(w, v)
 	}
+	g.MM++
+}
+
+// Size of the graph in edges
+func (g *Graph) E() int {
+	return g.MM
 }
