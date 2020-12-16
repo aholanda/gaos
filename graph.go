@@ -31,6 +31,14 @@ func NewDigraph(nvertices int) *Digraph {
 	return d
 }
 
+func (d *Digraph) NameIt(id string) {
+	d.ID = id
+}
+
+func (d *Digraph) Name() string {
+	return d.ID
+}
+
 func (d *Digraph) NameVertex(v VertexId, name string) {
 	if d.hasVertex(v) {
 		if _, ok := d.NameToVertex[name]; !ok {
@@ -104,7 +112,9 @@ type Graph struct {
 }
 
 func NewGraph(nvertices int) *Graph {
-	return &Graph{NewDigraph(nvertices), 0}
+	d := &Graph{NewDigraph(nvertices), 0}
+	d.ID = "graph"
+	return d
 }
 
 func (g *Graph) AddEdge(v, w VertexId) {
