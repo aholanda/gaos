@@ -39,6 +39,13 @@ func (d *Digraph) Name() string {
 	return d.ID
 }
 
+func (d *Digraph) VertexIndex(name string) (VertexId, error) {
+	if v, ok := d.NameToVertex[name]; ok {
+		return v, nil
+	}
+	return -1, errors.New("vertex named " + name + " not found")
+}
+
 func (d *Digraph) NameVertex(v VertexId, name string) {
 	if d.hasVertex(v) {
 		if _, ok := d.NameToVertex[name]; !ok {
