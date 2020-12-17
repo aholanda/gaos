@@ -142,7 +142,7 @@ func ReadPajek(filename string) *g.Digraph {
 					lineno, err)
 			}
 
-			w, err := strconv.Atoi(tks[0])
+			w, err := strconv.Atoi(tks[1])
 			if err != nil {
 				log.Fatalf("failed to read the vertex destination index at line %d: %v ",
 					lineno, err)
