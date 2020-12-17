@@ -52,3 +52,7 @@ func (ks *KosarajuSharirSCC) dfs(v VertexId) {
 		}
 	}
 }
+
+func (ks *KosarajuSharirSCC) Count() int {
+	return ks.count
+}
