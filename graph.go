@@ -59,7 +59,7 @@ func (d *Digraph) VertexName(v VertexId) string {
 	if d.hasVertex(v) {
 		return d.Keys[v]
 	}
-	return ""
+	return "v" + strconv.Itoa(int(v))
 }
 
 // Order of the graph
