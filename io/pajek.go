@@ -26,6 +26,10 @@ const (
 	// Separate vertices and their names and
 	// arcs.
 	PjkSeparator string = " "
+	// PajekFormatExtension is used as suffix for
+	// files with graph description in the Pajek
+	// format.
+	PajekFormatExtension string = ".net"
 )
 
 var PjkSectionNames = [...]string{"network", "vertices", "arcs"}
