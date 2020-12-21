@@ -2,13 +2,13 @@ package graphs
 
 // Source: https://www.educative.io/edpresso/how-to-implement-a-stack-in-golang
 type stackV struct {
-	verts []VertexId
+	verts []VertexID
 	n     int // number of vertices filled in the array
 }
 
 func newStackV(nverts int) *stackV {
 	return &stackV{
-		verts: make([]VertexId, nverts),
+		verts: make([]VertexID, nverts),
 		n:     0,
 	}
 }
@@ -24,7 +24,7 @@ func (s *stackV) isFull() bool {
 }
 
 // Push a new value onto the stack
-func (s *stackV) push(v VertexId) {
+func (s *stackV) push(v VertexID) {
 	if s.isFull() == false {
 		// Simply append the new value to the end of the stack
 		s.verts[len(s.verts)-s.n-1] = v

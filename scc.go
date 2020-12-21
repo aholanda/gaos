@@ -39,7 +39,7 @@ func (ks *KosarajuSharirSCC) Compute() {
 	}
 }
 
-func (ks *KosarajuSharirSCC) dfs(v VertexId) {
+func (ks *KosarajuSharirSCC) dfs(v VertexID) {
 	ks.visited[v] = true
 	ks.id[v] = ks.count
 

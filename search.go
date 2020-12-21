@@ -3,8 +3,8 @@ package graphs
 type DepthFirstOrder struct {
 	digraph     *Digraph
 	visited     []bool
-	pre         []VertexId // vertices in preorder
-	post        []VertexId // vertices in postorder
+	pre         []VertexID // vertices in preorder
+	post        []VertexID // vertices in postorder
 	reversePost *stackV    // vertices in reverse
 }
 
@@ -12,8 +12,8 @@ func NewDepthFirstOrder(d *Digraph) *DepthFirstOrder {
 	dfo := DepthFirstOrder{
 		digraph:     d,
 		visited:     make([]bool, d.V()),
-		pre:         make([]VertexId, d.V()),
-		post:        make([]VertexId, d.V()),
+		pre:         make([]VertexID, d.V()),
+		post:        make([]VertexID, d.V()),
 		reversePost: newStackV(d.V()),
 	}
 	vIter := NewVertexIterator(d)
@@ -34,7 +34,7 @@ func (dfo *DepthFirstOrder) Compute() {
 	}
 }
 
-func (dfo *DepthFirstOrder) dfs(d *Digraph, v VertexId) {
+func (dfo *DepthFirstOrder) dfs(d *Digraph, v VertexID) {
 	dfo.pre = append(dfo.pre, v)
 
 	dfo.visited[v] = true
@@ -49,14 +49,14 @@ func (dfo *DepthFirstOrder) dfs(d *Digraph, v VertexId) {
 	dfo.reversePost.push(v)
 }
 
-func (dfo *DepthFirstOrder) Pre() []VertexId {
+func (dfo *DepthFirstOrder) Pre() []VertexID {
 	return dfo.pre
 }
 
-func (dfo *DepthFirstOrder) Post() []VertexId {
+func (dfo *DepthFirstOrder) Post() []VertexID {
 	return dfo.post
 }
 
-func (dfo *DepthFirstOrder) ReversePost() []VertexId {
+func (dfo *DepthFirstOrder) ReversePost() []VertexID {
 	return dfo.reversePost.verts
 }

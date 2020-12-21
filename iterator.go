@@ -13,9 +13,9 @@ func NewVertexIterator(d *Digraph) *VertexIterator {
 	}
 }
 
-func (vi *VertexIterator) Value() VertexId {
-	var v VertexId
-	v = VertexId(vi.curIdx)
+func (vi *VertexIterator) Value() VertexID {
+	var v VertexID
+	v = VertexID(vi.curIdx)
 	vi.curIdx++
 
 	return v
@@ -29,10 +29,10 @@ func (vi *VertexIterator) HasNext() bool {
 type ArcIterator struct {
 	digraph *Digraph
 	curIdx  int
-	curAdj  []VertexId
+	curAdj  []VertexID
 }
 
-func NewArcIterator(d *Digraph, v VertexId) *ArcIterator {
+func NewArcIterator(d *Digraph, v VertexID) *ArcIterator {
 	return &ArcIterator{
 		digraph: d,
 		curIdx:  0,
@@ -40,8 +40,8 @@ func NewArcIterator(d *Digraph, v VertexId) *ArcIterator {
 	}
 }
 
-func (vi *ArcIterator) Value() VertexId {
-	var w VertexId
+func (vi *ArcIterator) Value() VertexID {
+	var w VertexID
 	w = vi.curAdj[vi.curIdx]
 	vi.curIdx++
 
