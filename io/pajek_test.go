@@ -14,7 +14,7 @@ var vNames = [...]string{"look", "feel", "great"}
 func TestWritePajek(t *testing.T) {
 	d := g.NewDigraph(V)
 	for i := 0; i < V; i++ {
-		d.NameVertex(g.VertexId(i), vNames[i])
+		d.NameVertex(g.VertexID(i), vNames[i])
 	}
 	d.AddArc(0, 1)
 	d.AddArc(0, 2)
@@ -38,9 +38,9 @@ func TestReadPajek(t *testing.T) {
 	d = ReadPajek(filename)
 
 	for i := 0; i < d.V(); i++ {
-		if d.VertexName(g.VertexId(i)) != vNames[i] {
+		if d.VertexName(g.VertexID(i)) != vNames[i] {
 			t.Errorf("name for vertex %d was incorrect, got: %v, want: %s.",
-				i, d.VertexName(g.VertexId(i)), vNames[i])
+				i, d.VertexName(g.VertexID(i)), vNames[i])
 		}
 	}
 
