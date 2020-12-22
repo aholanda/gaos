@@ -1,3 +1,8 @@
+// Copyright 2020 University of São Paulo/Brazil.
+// All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package graphs
 
 type DepthFirstOrder struct {
