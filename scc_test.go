@@ -61,7 +61,14 @@ func TestKosarajuSharirSCC(t *testing.T) {
 		}
 	}
 
-	if scc.count != 5 {
-		t.Errorf("Expected %d strongly connected components, got %d", 5, scc.count)
+	count := scc.Count()
+	if count != 5 {
+		t.Errorf("Expected %d strongly connected components, got %d", 5, count)
+	}
+
+	gcs := scc.GreatestComponentSize()
+	if gcs != 5 {
+		t.Errorf("Expected %d vertices in the greatest strongly connected components, got %d",
+			5, gcs)
 	}
 }
