@@ -47,4 +47,22 @@ func Example() {
 	// 0: 1 2 0
 	// 1: 0 2
 	// 2: 1
+
+	// Another way to traverse the same digraph
+	// is using the iterator structure.
+	vIter := g.NewVertexIterator(digraph)
+	for vIter.HasNext() { // vertices
+		v := vIter.Value()
+		fmt.Printf("%d:", v)
+		aIter := g.NewArcIterator(digraph, v)
+		for aIter.HasNext() { // arcs|edges
+			w := aIter.Value()
+			fmt.Printf(" %d", w)
+		}
+		fmt.Println()
+	}
+	// Output
+	// 0: 1 2 0
+	// 1: 0 2
+	// 2: 1
 }
