@@ -6,7 +6,6 @@
 package graphs
 
 import (
-	"log"
 	"sort"
 )
 
@@ -87,18 +86,17 @@ func (ks *KosarajuSharirSCC) dfs(v VertexID) {
 	}
 }
 
-// checkComputation verify if the client didn't
-// forget to run Compute() to find the components.
-func checkComputation(ks *KosarajuSharirSCC) {
-	if ks.wasComputed == false {
-		log.Fatal("Please run Computer() method after creating the KosarajuSharirSCC structure")
-	}
+// hadRunCompute is the implementation of the
+// method with same name in the interface ComputingPerformer
+// to indicate if the Compute method was already called.
+func (ks *KosarajuSharirSCC) hadRunCompute() bool {
+	return ks.wasComputed
 }
 
 // Count returns the number of connected
 // components found.
 func (ks *KosarajuSharirSCC) Count() int {
-	checkComputation(ks)
+	ComputeWasCalled(ks)
 
 	return ks.count
 }
@@ -110,7 +108,7 @@ func (ks *KosarajuSharirSCC) LargestComponentSize() int {
 	// of vertices in it.
 	var idToSize map[int]int
 
-	checkComputation(ks)
+	ComputeWasCalled(ks)
 
 	idToSize = make(map[int]int)
 	for _, id := range ks.id {
