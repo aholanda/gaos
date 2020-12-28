@@ -103,9 +103,9 @@ func (ks *KosarajuSharirSCC) Count() int {
 	return ks.count
 }
 
-// GreatestComponentSize returns the number of vertices
-// in the greatest strongly connected component.
-func (ks *KosarajuSharirSCC) GreatestComponentSize() int {
+// LargestComponentSize returns the number of vertices
+// in the largest strongly connected component.
+func (ks *KosarajuSharirSCC) LargestComponentSize() int {
 	// idToSize maps the id of the component and the number
 	// of vertices in it.
 	var idToSize map[int]int
